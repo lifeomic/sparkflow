@@ -20,7 +20,7 @@ def small_model():
 if __name__ == '__main__':
     spark = SparkSession.builder \
         .appName("examples") \
-        .master('local[8]') \
+        .master('local[8]').config('spark.driver.memory', '4g') \
         .getOrCreate()
 
 
@@ -29,6 +29,7 @@ if __name__ == '__main__':
     va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features')
     encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False)
 
+    #demonstration of options. Not all are required
     spark_model = SparkAsyncDL(
         inputCol='features',
         tensorflowGraph=mg,
@@ -36,11 +37,16 @@ if __name__ == '__main__':
         tfLabel='y:0',
         tfOutput='out:0',
         tfOptimizer='adam',
-        tfLearningRate=.001,
-        iters=1,
+        tfLearningRate=.0001,
+        miniBatchSize=300,
+        miniStochasticIters=-1,
+        shufflePerIter=True,
+        iters=15,
         predictionCol='predicted',
         labelCol='labels',
+        partitions=4,
         verbose=1
     )
 
-    p = Pipeline(stages=[va, encoded, spark_model]).fit(df).transform(df)
+    p = Pipeline(stages=[va, encoded, spark_model]).fit(df).transform(df).take(2)
+    print p
