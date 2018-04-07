@@ -34,7 +34,7 @@ def handle_data(data, inp_col, label_col):
     return np.asarray(data[inp_col]), data[label_col]
 
 
-class SparkAsyncTransformer(Model, HasInputCol, HasPredictionCol, MLReadable, MLWritable, Identifiable, PysparkReaderWriter):
+class SparkAsyncTransformer(Model, HasInputCol, HasPredictionCol, PysparkReaderWriter, MLReadable, MLWritable, Identifiable):
 
     modelJson = Param(Params._dummy(), "modelJson", "", typeConverter=TypeConverters.toString)
     modelWeights = Param(Params._dummy(), "modelWeights", "", typeConverter=TypeConverters.toString)
@@ -85,7 +85,7 @@ class SparkAsyncTransformer(Model, HasInputCol, HasPredictionCol, MLReadable, ML
         return dataset.rdd.mapPartitions(lambda x: predict_func(x, mod_json, out, mod_weights, inp, tf_output, tf_input, tf_dropout, to_keep_dropout)).toDF()
 
 
-class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol, MLReadable, MLWritable, Identifiable, PysparkReaderWriter):
+class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,PysparkReaderWriter, MLReadable, MLWritable, Identifiable):
 
     tensorflowGraph = Param(Params._dummy(), "tensorflowGraph", "", typeConverter=TypeConverters.toString)
     tfInput = Param(Params._dummy(), "tfInput", "", typeConverter=TypeConverters.toString)
