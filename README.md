@@ -54,7 +54,3 @@ p.write().save("location")
 For more, visit the examples directory.
 
 
-## Documentation
-
-#### SparkAsyncDL
-
