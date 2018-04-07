@@ -54,3 +54,7 @@ p.write().save("location")
 For more, visit the examples directory.
 
 
+## Installation
+This repo requires Apache Spark >= 2.0, flask, and Tensorflow to all be installed. This repo will eventually be added to pip.
+
+

@@ -9,8 +9,11 @@ import time
 import tensorflow as tf
 import itertools
 from sparkflow.RWLock import RWLock
-
+import logging
 from multiprocessing import Process
+
+log = logging.getLogger("werkzeug")
+log.setLevel(logging.ERROR)
 
 
 def get_server_weights(master_url='localhost:5000'):
