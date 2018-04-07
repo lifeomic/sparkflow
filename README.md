@@ -3,6 +3,11 @@
 Alpha implementation of Tensorflow on Spark. The goal of this library is to provide a simple, understandable interface 
 in using tensorflow on Spark. With SparkFlow, you can easily integrate your deep learning model with a Spark Pipeline.
 
+## Installation
+This repo requires Apache Spark >= 2.0, flask, and Tensorflow to all be installed.
+
+Install sparkflow via pip: `pip install sparkflow`
+
 
 ## Example
 
@@ -53,8 +58,5 @@ p.write().save("location")
 
 For more, visit the examples directory.
 
-
-## Installation
-This repo requires Apache Spark >= 2.0, flask, and Tensorflow to all be installed. This repo will eventually be added to pip.
 
 
