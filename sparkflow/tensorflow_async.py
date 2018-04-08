@@ -34,7 +34,7 @@ def handle_data(data, inp_col, label_col):
     return np.asarray(data[inp_col]), data[label_col]
 
 
-class SparkAsyncTransformer(Model, HasInputCol, HasPredictionCol, PysparkReaderWriter, MLReadable, MLWritable, Identifiable):
+class SparkAsyncDLModel(Model, HasInputCol, HasPredictionCol, PysparkReaderWriter, MLReadable, MLWritable, Identifiable):
 
     modelJson = Param(Params._dummy(), "modelJson", "", typeConverter=TypeConverters.toString)
     modelWeights = Param(Params._dummy(), "modelWeights", "", typeConverter=TypeConverters.toString)
@@ -53,7 +53,7 @@ class SparkAsyncTransformer(Model, HasInputCol, HasPredictionCol, PysparkReaderW
                  tfDropout=None,
                  toKeepDropout=None,
                  predictionCol=None):
-        super(SparkAsyncTransformer, self).__init__()
+        super(SparkAsyncDLModel, self).__init__()
         self._setDefault(modelJson=None,  inputCol='encoded',
                          predictionCol='predicted', tfOutput=None, tfInput=None,
                          modelWeights=None, tfDropout=None, toKeepDropout=False)
@@ -264,7 +264,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
         weights = spark_model.train(df)
         json_weights = convert_weights_to_json(weights)
 
-        return SparkAsyncTransformer(
+        return SparkAsyncDLModel(
             inputCol=inp_col,
             modelJson=graph_json,
             modelWeights=json_weights,

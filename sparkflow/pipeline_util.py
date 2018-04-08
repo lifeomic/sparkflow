@@ -5,9 +5,6 @@ from pyspark.ml.feature import StopWordsRemover
 from pyspark.ml.wrapper import JavaParams
 from pyspark.context import SparkContext
 import zlib
-from py4j.java_collections import ListConverter
-import time
-import numpy as np
 
 """
 based off below stackoverflow thread. Changes were made for performance.

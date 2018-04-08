@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 import tensorflow as tf
 from pyspark.ml.feature import VectorAssembler, OneHotEncoder
-from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncTransformer
+from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncDLModel
 from pyspark.sql.functions import rand
 from sparkflow.graph_utils import build_graph
 
@@ -49,5 +49,5 @@ if __name__ == '__main__':
     )
 
     spark_model.fit(encoded).save('wowzers')
-    x = SparkAsyncTransformer.load("wowzers").transform(encoded).take(10)
+    x = SparkAsyncDLModel.load("wowzers").transform(encoded).take(10)
     print x
