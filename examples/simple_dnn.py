@@ -1,10 +1,9 @@
 from pyspark.sql import SparkSession
 import tensorflow as tf
 from pyspark.ml.feature import VectorAssembler, OneHotEncoder
-from sparkflow.tensorflow_async import SparkAsyncDL
+from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncTransformer
 from pyspark.sql.functions import rand
 from sparkflow.graph_utils import build_graph
-from pyspark.ml.pipeline import Pipeline
 
 
 def small_model():
@@ -50,5 +49,5 @@ if __name__ == '__main__':
     )
 
     spark_model.fit(encoded).save('wowzers')
-    #p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
-    #p.write().overwrite().save('cool_model')
+    x = SparkAsyncTransformer.load("wowzers").transform(encoded).take(10)
+    print x

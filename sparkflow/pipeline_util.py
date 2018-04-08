@@ -10,6 +10,7 @@ import time
 import numpy as np
 
 """
+based off below stackoverflow thread. Changes were made for performance.
 credit: https://stackoverflow.com/questions/41399399/serialize-a-custom-transformer-using-python-to-be-used-within-a-pyspark-ml-pipel
 """
 
@@ -49,6 +50,7 @@ class PysparkPipelineWrapper(object):
                 stages[i] = PysparkPipelineWrapper.unwrap(stage)
             if isinstance(stage, PysparkObjId._getCarrierClass()) and stage.getStopWords()[-1] == PysparkObjId._getPyObjId():
                 swords = stage.getStopWords()[:-1] # strip the id
+                swords = swords[0].split(',')[0:-1]
                 lst = [chr(int(d)) for d in swords]
                 dmp = ''.join(lst)
                 dmp = zlib.decompress(dmp)
@@ -91,6 +93,7 @@ class PysparkReaderWriter(object):
         and convert, via dill, back to our python instance.
         """
         swords = java_obj.getStopWords()[:-1] # strip the id
+        swords = swords[0].split(',')[0:-1]
         lst = [chr(int(d)) for d in swords] # convert from string integer list to bytes
         dmp = ''.join(lst)
         dmp = zlib.decompress(dmp)
@@ -106,12 +109,12 @@ class PysparkReaderWriter(object):
         dmp = dill.dumps(self)
         dmp = zlib.compress(dmp)
         sc = SparkContext._active_spark_context
-        pylist = [sc._gateway.jvm.java.lang.String(str(ord(d))) for d in dmp] # convert byes to string integer list
+        pylist = [str(ord(d))+ ',' for d in dmp] # convert bytes to string integer list
+        pylist = [''.join(pylist)]
         pylist.append(PysparkObjId._getPyObjId()) # add our id so PysparkPipelineWrapper can id us.
         java_class = sc._gateway.jvm.java.lang.String
         java_array = sc._gateway.new_array(java_class, len(pylist))
-        for i in range(0, len(pylist), 10000):
-            java_array[i:i+10000] = pylist[i:i+10000]
+        java_array[0:2] = pylist[0:2]
         _java_obj = JavaParams._new_java_obj(PysparkObjId._getCarrierClass(javaName=True), self.uid)
         _java_obj.setStopWords(java_array)
         return _java_obj
