@@ -1,9 +1,15 @@
-# Lifeomic SparkFlow
+# SparkFlow
 
-Alpha implementation of Tensorflow on Spark. The goal of this library is to provide a simple, understandable interface 
-in using Tensorflow on Spark. With SparkFlow, you can easily integrate your deep learning model with a Spark Pipeline.
+This is an implementation of Tensorflow on Spark. The goal of this library is to provide a simple, understandable interface 
+in using Tensorflow on Spark. With SparkFlow, you can easily integrate your deep learning model with a ML Spark Pipeline.
 Underneath, SparkFlow uses a parameter server to train the Tensorflow network in a distributed manor. Through the api,
 the user can specify the style of training, whether that is Hogwild or async with locking.
+
+## Why should I use this?
+While there are other libraries that use Tensorflow on Apache Spark, Sparkflow's objective is to work seemlessly 
+with ML Pipelines, provide a simple interface for training Tensorflow graphs, and give basic abstractions for 
+faster development. For training, Sparkflow uses a parameter server which lives on the driver and allows for asynchronous training. This tool 
+provides faster training time when using big data.
 
 ## Installation
 
@@ -145,11 +151,8 @@ One big thing to remember, especially for larger networks, is to add the `--exec
 each instance is only training one network. This will also be needed for gpu training as well.
 
 
-## Known Issues and Future Plans
+## Future planned features 
 
-One known issue is the performance speed of saving large sparkflow models. We currently have plans to fix this in the near term.
-Also, once PySpark implements saving/loading capabilities for estimators, we will point our models to that, instead of our 
-custom solutions.
-
-A hyper-opt implementation is on the roadmap as well, and will be implemented within the next couple of months.
+* Hyperopt implementation 
+* Save pre-trained Tensorflow models
 

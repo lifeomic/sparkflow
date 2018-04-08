@@ -24,9 +24,8 @@ def cnn_model():
 if __name__ == '__main__':
     spark = SparkSession.builder \
         .appName("examples") \
-        .master('local[8]') \
+        .master('local[8]').config('spark.driver.memory', '4g') \
         .getOrCreate()
-
 
     df = spark.read.option("inferSchema", "true").csv('mnist_train.csv').orderBy(rand())
     mg = build_graph(cnn_model)
@@ -42,11 +41,12 @@ if __name__ == '__main__':
         miniBatchSize=300,
         miniStochasticIters=-1,
         shufflePerIter=True,
-        iters=15,
+        iters=1,
         tfLearningRate=.0001,
         predictionCol='predicted',
         labelCol='labels',
         verbose=1
     )
 
-    p = Pipeline(stages=[va, encoded, spark_model]).fit(df).transform(df)
+    p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
+    p.save("asdfasd")
