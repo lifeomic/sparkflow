@@ -27,8 +27,8 @@ if __name__ == '__main__':
     df = spark.read.option("inferSchema", "true").csv('mnist_train.csv').orderBy(rand())
     mg = build_graph(small_model)
 
-    va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features')
-    encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False)
+    va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features').transform(df)
+    encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False).transform(va).select(['features', 'labels'])
 
     #demonstration of options. Not all are required
     spark_model = SparkAsyncDL(
@@ -49,5 +49,6 @@ if __name__ == '__main__':
         verbose=1
     )
 
-    p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
-    p.write().overwrite().save('cool_model')
+    spark_model.fit(encoded).save('wowzers')
+    #p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
+    #p.write().overwrite().save('cool_model')

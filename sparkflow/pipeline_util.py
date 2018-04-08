@@ -4,6 +4,11 @@ from pyspark.ml.util import JavaMLReader, JavaMLWriter
 from pyspark.ml.feature import StopWordsRemover
 from pyspark.ml.wrapper import JavaParams
 from pyspark.context import SparkContext
+import zlib
+from py4j.java_collections import ListConverter
+import time
+import numpy as np
+
 """
 credit: https://stackoverflow.com/questions/41399399/serialize-a-custom-transformer-using-python-to-be-used-within-a-pyspark-ml-pipel
 """
@@ -46,6 +51,7 @@ class PysparkPipelineWrapper(object):
                 swords = stage.getStopWords()[:-1] # strip the id
                 lst = [chr(int(d)) for d in swords]
                 dmp = ''.join(lst)
+                dmp = zlib.decompress(dmp)
                 py_obj = dill.loads(dmp)
                 stages[i] = py_obj
 
@@ -87,6 +93,7 @@ class PysparkReaderWriter(object):
         swords = java_obj.getStopWords()[:-1] # strip the id
         lst = [chr(int(d)) for d in swords] # convert from string integer list to bytes
         dmp = ''.join(lst)
+        dmp = zlib.decompress(dmp)
         py_obj = dill.loads(dmp)
         return py_obj
 
@@ -97,13 +104,14 @@ class PysparkReaderWriter(object):
         :return: Java object equivalent to this instance.
         """
         dmp = dill.dumps(self)
-        pylist = [str(ord(d)) for d in dmp] # convert byes to string integer list
-        pylist.append(PysparkObjId._getPyObjId()) # add our id so PysparkPipelineWrapper can id us.
+        dmp = zlib.compress(dmp)
         sc = SparkContext._active_spark_context
+        pylist = [sc._gateway.jvm.java.lang.String(str(ord(d))) for d in dmp] # convert byes to string integer list
+        pylist.append(PysparkObjId._getPyObjId()) # add our id so PysparkPipelineWrapper can id us.
         java_class = sc._gateway.jvm.java.lang.String
         java_array = sc._gateway.new_array(java_class, len(pylist))
-        for i in xrange(len(pylist)):
-            java_array[i] = pylist[i]
+        for i in range(0, len(pylist), 10000):
+            java_array[i:i+10000] = pylist[i:i+10000]
         _java_obj = JavaParams._new_java_obj(PysparkObjId._getCarrierClass(javaName=True), self.uid)
         _java_obj.setStopWords(java_array)
         return _java_obj

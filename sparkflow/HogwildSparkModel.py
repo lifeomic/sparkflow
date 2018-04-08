@@ -11,6 +11,7 @@ import itertools
 from sparkflow.RWLock import RWLock
 import logging
 from multiprocessing import Process
+import uuid
 
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
