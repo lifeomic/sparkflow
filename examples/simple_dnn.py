@@ -50,4 +50,4 @@ if __name__ == '__main__':
 
     spark_model.fit(encoded).save('wowzers')
     x = SparkAsyncDLModel.load("wowzers").transform(encoded).take(10)
-    print x
+    print(x)

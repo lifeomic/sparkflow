@@ -45,4 +45,4 @@ if __name__ == '__main__':
 
     spark_model.fit(na).save('auto_encoded')
     x = SparkAsyncDLModel.load("auto_encoded").transform(na).take(10)
-    print x
+    print(x)
