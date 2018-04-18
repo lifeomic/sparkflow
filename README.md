@@ -53,7 +53,7 @@ spark_model = SparkAsyncDL(
     tfLabel='y:0',
     tfOutput='out:0',
     tfLearningRate=.001,
-    iters=1,
+    iters=20,
     predictionCol='predicted',
     labelCol='labels',
     verbose=1
@@ -153,6 +153,7 @@ each instance is only training one network. This will also be needed for gpu tra
 
 ## Future planned features 
 
-* Hyperopt implementation 
-* Save pre-trained Tensorflow models
+* Hyperopt implementation for smaller and larger datasets
+* Load pre-trained Tensorflow models, and put them into a valid Spark Pipeline Model
+* AWS EMR guides
 
