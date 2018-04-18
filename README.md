@@ -136,7 +136,8 @@ iters: number of iterations of training
 predictionCol: The prediction column name on the spark dataframe for transformations
 partitions: Number of partitions to use for training (recommended on partition per instance)
 miniBatchSize: size of the mini batch. A size of -1 means train on all rows
-miniStochasticIters: If using a mini batch, you can choose number of mini iters you would like to do a value of -1 means that you would only like to do one run
+miniStochasticIters: If using a mini batch, you can choose number of mini iters you would like to do with the
+batch size above per epoch. A value of -1 means that you would like to run mini-batches on all data in the partition
 acquireLock: If you do not want to utilize hogwild training, this will set a lock
 shufflePerIter: Specifies if you want to shuffle the features after each iteration
 tfDropout: Specifies the dropout variable. This is important for predictions
