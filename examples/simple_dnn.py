@@ -41,7 +41,7 @@ if __name__ == '__main__':
         miniBatchSize=300,
         miniStochasticIters=-1,
         shufflePerIter=True,
-        iters=2,
+        iters=20,
         predictionCol='predicted',
         labelCol='labels',
         partitions=4,
