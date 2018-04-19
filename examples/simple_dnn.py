@@ -41,13 +41,13 @@ if __name__ == '__main__':
         miniBatchSize=300,
         miniStochasticIters=-1,
         shufflePerIter=True,
-        iters=20,
+        iters=2,
         predictionCol='predicted',
         labelCol='labels',
         partitions=4,
         verbose=1
     )
 
-    spark_model.fit(encoded).save('wowzers')
-    x = SparkAsyncDLModel.load("wowzers").transform(encoded).take(10)
+    spark_model.fit(encoded).save('simple_dnn')
+    x = SparkAsyncDLModel.load("simple_dnn").transform(encoded).take(10)
     print(x)
