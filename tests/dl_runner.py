@@ -6,6 +6,7 @@ from google.protobuf import json_format
 import random
 from sparkflow.tensorflow_async import SparkAsyncDL
 from sparkflow.HogwildSparkModel import HogwildSparkModel
+from sparkflow.graph_utils import build_graph
 
 random.seed(12345)
 
@@ -35,6 +36,7 @@ def create_random_model():
     y = tf.placeholder(tf.float32, shape=[None, 1], name='y')
     loss = tf.losses.mean_squared_error(y, out)
     return loss
+
 
 def test_spark_hogwild():
     xor = [(0.0, Vectors.dense(np.array([0.0, 0.0]))),
@@ -92,6 +94,39 @@ def test_overlapping_guassians():
         labelCol='label'
     )
 
+    data = spark_model.fit(processed).transform(processed).take(10)
+    nb_errors = 0
+    for d in data:
+        lab = d['label']
+        predicted = d['predicted'][0]
+        if predicted != lab:
+            nb_errors += 1
+    assert nb_errors < len(data)
+
+
+def test_multi_partition_shuffle():
+    dat = [(1.0, Vectors.dense(np.random.normal(0,1,10))) for _ in range(0, 200)]
+    dat2 = [(0.0, Vectors.dense(np.random.normal(2,1,10))) for _ in range(0, 200)]
+    dat.extend(dat2)
+    random.shuffle(dat)
+    processed = spark.createDataFrame(dat, ["label", "features"])
+
+    mg = build_graph(create_random_model)
+
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='adam',
+        tfLearningRate=.1,
+        iters=20,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        partitionShuffles=2
+    )
     data = spark_model.fit(processed).transform(processed).take(10)
     nb_errors = 0
     for d in data:
