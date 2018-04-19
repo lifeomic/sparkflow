@@ -48,6 +48,6 @@ if __name__ == '__main__':
         verbose=1
     )
 
-    spark_model.fit(encoded).save('wowzers')
-    x = SparkAsyncDLModel.load("wowzers").transform(encoded).take(10)
+    spark_model.fit(encoded).save('simple_dnn')
+    x = SparkAsyncDLModel.load("simple_dnn").transform(encoded).take(10)
     print(x)

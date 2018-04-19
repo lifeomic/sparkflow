@@ -53,7 +53,7 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
         sess.run(tf.global_variables_initializer())
         grads = tf.gradients(loss_variable, tf.trainable_variables())
         grads = list(zip(grads, tf.trainable_variables()))
-
+        partition_id = uuid.uuid4().hex
         for i in range(0, iters):
             weights = get_server_weights(master_url)
             tensorflow_set_weights(weights)
@@ -86,7 +86,7 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
             if verbose:
                 feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, -1)
                 losses = sess.run(loss_variable, feed_dict= feed_dict)
-                print("Iteration: %i, Loss: %f" % (i, losses))
+                print("Partition Id: %s, Iteration: %i, Loss: %f" % (partition_id, i, losses))
 
 
 class HogwildSparkModel(object):
@@ -108,7 +108,8 @@ class HogwildSparkModel(object):
                  mini_batch=-1,
                  mini_stochastic_iters=-1,
                  shuffle=True,
-                 verbose=0):
+                 verbose=0,
+                 partition_shuffles=1):
         self.tensorflowGraph = tensorflowGraph
         self.iters = iters
         self.tfInput = tfInput
@@ -121,6 +122,7 @@ class HogwildSparkModel(object):
         self.mini_stochastic_iters = mini_stochastic_iters
         self.verbose = verbose
         self.shuffle = shuffle
+        self.partition_shuffles= partition_shuffles
         self.master_url = master_url if master_url is not None else HogwildSparkModel.determine_master()
 
     @staticmethod
@@ -156,7 +158,6 @@ class HogwildSparkModel(object):
         """
         app = Flask(__name__)
         self.app = app
-        tf.set_random_seed(12345)
         max_errors = self.iters
         lock = RWLock()
 
@@ -172,7 +173,6 @@ class HogwildSparkModel(object):
             train_op = optimizer.apply_gradients(grads)
             init = tf.global_variables_initializer()
 
-        tf.set_random_seed(12345)
         glob_session = tf.Session(server.target, graph=ng)
         with ng.as_default():
             with glob_session.as_default():
@@ -233,10 +233,14 @@ class HogwildSparkModel(object):
             msi = self.mini_stochastic_iters
             verbose = self.verbose
             shuffle = self.shuffle
-            rdd.foreachPartition(lambda x: handle_model(x, tgraph, tfInput,
-                                                        tfLabel=tfLabel, master_url=master_url,
-                                                        iters=iters, mini_batch_size=mbs, shuffle=shuffle,
-                                                        mini_stochastic_iters=msi, verbose=verbose))
+            for i in range(self.partition_shuffles):
+                rdd.foreachPartition(lambda x: handle_model(x, tgraph, tfInput,
+                                                            tfLabel=tfLabel, master_url=master_url,
+                                                            iters=iters, mini_batch_size=mbs, shuffle=shuffle,
+                                                            mini_stochastic_iters=msi, verbose=verbose))
+                if self.partition_shuffles - i > 1:
+                    num_partitions = rdd.getNumPartitions()
+                    rdd = rdd.repartition(num_partitions)
             server_weights = get_server_weights(master_url)
             self.stop_server()
             return server_weights

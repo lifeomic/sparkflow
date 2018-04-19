@@ -49,4 +49,4 @@ if __name__ == '__main__':
     )
 
     p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
-    p.save("asdfasd")
+    p.save("cnn")
