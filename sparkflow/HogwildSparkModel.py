@@ -53,7 +53,7 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
         sess.run(tf.global_variables_initializer())
         grads = tf.gradients(loss_variable, tf.trainable_variables())
         grads = list(zip(grads, tf.trainable_variables()))
-
+        partition_id = uuid.uuid4().hex
         for i in range(0, iters):
             weights = get_server_weights(master_url)
             tensorflow_set_weights(weights)
@@ -84,7 +84,6 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
                 put_deltas_to_server(gradients, master_url)
 
             if verbose:
-                partition_id = uuid.uuid4().hex
                 feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, -1)
                 losses = sess.run(loss_variable, feed_dict= feed_dict)
                 print("Partition Id: %s, Iteration: %i, Loss: %f" % (partition_id, i, losses))
