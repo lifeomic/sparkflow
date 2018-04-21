@@ -157,3 +157,9 @@ each instance is only training one network. This will also be needed for gpu tra
 * Load pre-trained Tensorflow models, and put them into a valid Spark Pipeline Model
 * AWS EMR guides
 
+
+## Literature and Inspiration
+
+* HOGWILD!: A Lock-Free Approach to Parallelizing Stochastic Gradient Descent: https://arxiv.org/pdf/1106.5730.pdf
+* Elephas: https://github.com/maxpumperla/elephas
+* Scaling Distributed Machine Learning with the Parameter Server: https://www.cs.cmu.edu/~muli/file/parameter_server_osdi14.pdf
