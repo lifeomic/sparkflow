@@ -16,12 +16,12 @@ def small_model():
     loss = tf.losses.softmax_cross_entropy(y, out)
     return loss
 
+
 if __name__ == '__main__':
     spark = SparkSession.builder \
         .appName("examples") \
         .master('local[8]').config('spark.driver.memory', '4g') \
         .getOrCreate()
-
 
     df = spark.read.option("inferSchema", "true").csv('mnist_train.csv').orderBy(rand())
     mg = build_graph(small_model)

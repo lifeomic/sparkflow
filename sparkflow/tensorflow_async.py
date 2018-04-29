@@ -11,21 +11,30 @@ from pyspark import keyword_only
 from sparkflow.HogwildSparkModel import HogwildSparkModel
 from sparkflow.ml_util import convert_weights_to_json, predict_func
 from pyspark import SparkContext
+import json
 
 
-def build_optimizer(optimizer_name, learning_rate):
-    if optimizer_name == 'adam':
-        return tf.train.AdamOptimizer(learning_rate=learning_rate, use_locking=False)
-    elif optimizer_name == 'rmsprop':
-        return tf.train.RMSPropOptimizer(learning_rate=learning_rate, use_locking=False)
-    elif optimizer_name == 'momentum':
-        return tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9, use_locking=False)
-    elif optimizer_name == 'adadelta':
-        return tf.train.AdadeltaOptimizer(learning_rate=learning_rate, use_locking=False)
-    elif optimizer_name == 'adagrad':
-        return tf.train.AdagradOptimizer(learning_rate=learning_rate, use_locking=False)
-    else:
-        return tf.train.GradientDescentOptimizer(learning_rate=learning_rate, use_locking=False)
+def build_optimizer(optimizer_name, learning_rate, optimizer_options):
+    available_optimizers = {
+        'adam': tf.train.AdamOptimizer,
+        'rmsprop': tf.train.RMSPropOptimizer,
+        'momentum': tf.train.MomentumOptimizer,
+        'adadelta': tf.train.AdadeltaOptimizer,
+        'adagrad': tf.train.AdagradOptimizer,
+        'gradient_descent': tf.train.GradientDescentOptimizer
+    }
+
+    if optimizer_options is None:
+        optimizer_options = {
+            "learning_rate": learning_rate,
+            "use_locking": False
+        }
+        if optimizer_name == 'momentum':
+            optimizer_options['momentum'] = 0.9
+
+    if optimizer_name in available_optimizers:
+        return available_optimizers[optimizer_name](**optimizer_options)
+    return available_optimizers['gradient_descent'](**optimizer_options)
 
 
 def handle_data(data, inp_col, label_col):
@@ -103,6 +112,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
     tfDropout = Param(Params._dummy(), "tfDropout", "", typeConverter=TypeConverters.toString)
     toKeepDropout = Param(Params._dummy(), "toKeepDropout", "", typeConverter=TypeConverters.toBoolean)
     partitionShuffles = Param(Params._dummy(), "partitionShuffles", "", typeConverter=TypeConverters.toInt)
+    optimizerOptions = Param(Params._dummy(), "optimizerOptions", "", typeConverter=TypeConverters.toString)
 
     @keyword_only
     def __init__(self,
@@ -124,7 +134,8 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
                  toKeepDropout=None,
                  verbose=None,
                  labelCol=None,
-                 partitionShuffles=None):
+                 partitionShuffles=None,
+                 optimizerOptions=None):
         """
         :param inputCol: Spark dataframe inputCol. Similar to other spark ml inputCols
         :param tensorflowGraph: The protobuf tensorflow graph. You can use the utility function in graph_utils
@@ -151,6 +162,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
         :param partitionShuffles: This will shuffle your data after iterations are completed, then run again. For example,
         if you have 2 partition shuffles and 100 iterations, it will run 100 iterations then reshuffle and run 100 iterations again.
         The repartition hits performance and should be used with care.
+        :param optimizerOptions: Json options to apply to tensorflow optimizers.
         """
         super(SparkAsyncDL, self).__init__()
         self._setDefault(inputCol='transformed', tensorflowGraph='',
@@ -158,7 +170,8 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
                          tfOptimizer='adam', tfLearningRate=.01, partitions=5,
                          miniBatchSize=128, miniStochasticIters=-1,
                          shufflePerIter=True, tfDropout=None, acquireLock=False, verbose=0,
-                         iters=1000, toKeepDropout=False, predictionCol='predicted', labelCol=None, partitionShuffles=1)
+                         iters=1000, toKeepDropout=False, predictionCol='predicted', labelCol=None,
+                         partitionShuffles=1, optimizerOptions=None)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -182,7 +195,8 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
                   toKeepDropout=None,
                   verbose=None,
                   labelCol=None,
-                  partitionShuffles=None):
+                  partitionShuffles=None,
+                  optimizerOptions=None):
         kwargs = self._input_kwargs
         return self._set(**kwargs)
 
@@ -234,6 +248,9 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
     def getPartitionShuffles(self):
         return self.getOrDefault(self.partitionShuffles)
 
+    def getOptimizerOptions(self):
+        return self.getOrDefault(self.optimizerOptions)
+
     def _fit(self, dataset):
         inp_col = self.getInputCol()
         graph_json = self.getTensorflowGraph()
@@ -243,7 +260,10 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
         tf_input = self.getTfInput()
         tf_label = self.getTfLabel()
         tf_output = self.getTfOutput()
-        tf_optimizer = build_optimizer(self.getTfOptimizer(), self.getTfLearningRate())
+        optimizer_options = self.getOptimizerOptions()
+        if optimizer_options is not None:
+            optimizer_options = json.loads(optimizer_options)
+        tf_optimizer = build_optimizer(self.getTfOptimizer(), self.getTfLearningRate(), optimizer_options)
         partitions = self.getPartitions()
         acquire_lock = self.getAqcuireLock()
         mbs = self.getMiniBatchSize()
