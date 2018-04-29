@@ -6,7 +6,7 @@ from google.protobuf import json_format
 import random
 from sparkflow.tensorflow_async import SparkAsyncDL
 from sparkflow.HogwildSparkModel import HogwildSparkModel
-from sparkflow.graph_utils import build_graph, build_adam_config
+from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_config
 
 random.seed(12345)
 
@@ -43,7 +43,7 @@ def handle_test(spark_model, processed):
     nb_errors = 0
     for d in data:
         lab = d['label']
-        predicted = d['predicted'][0]
+        predicted = 1 if d['predicted'][0] >= 0.5 else 0
         if predicted != lab:
             nb_errors += 1
     assert nb_errors < len(data)
@@ -139,10 +139,34 @@ def test_adam_optimizer_options():
         tfOutput='outer/Sigmoid:0',
         tfOptimizer='adam',
         tfLearningRate=.1,
-        iters=35,
+        iters=25,
         partitions=4,
         predictionCol='predicted',
         labelCol='label',
+        verbose=1,
         optimizerOptions=options
     )
     handle_test(spark_model, processed)
+
+
+def test_rmsprop():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_rmsprop_config(learning_rate=0.1, decay=0.95, momentum=0.1, centered=False)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='rmsprop',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        verbose=1,
+        optimizerOptions=options
+    )
+    handle_test(spark_model, processed)
+
