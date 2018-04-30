@@ -2,7 +2,7 @@
 
 This is an implementation of Tensorflow on Spark. The goal of this library is to provide a simple, understandable interface 
 in using Tensorflow on Spark. With SparkFlow, you can easily integrate your deep learning model with a ML Spark Pipeline.
-Underneath, SparkFlow uses a parameter server to train the Tensorflow network in a distributed manor. Through the api,
+Underneath, SparkFlow uses a parameter server to train the Tensorflow network in a distributed manner. Through the api,
 the user can specify the style of training, whether that is Hogwild or async with locking.
 
 ## Why should I use this?
