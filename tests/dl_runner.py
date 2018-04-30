@@ -6,7 +6,7 @@ from google.protobuf import json_format
 import random
 from sparkflow.tensorflow_async import SparkAsyncDL
 from sparkflow.HogwildSparkModel import HogwildSparkModel
-from sparkflow.graph_utils import build_graph
+from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_config
 
 random.seed(12345)
 
@@ -36,6 +36,25 @@ def create_random_model():
     y = tf.placeholder(tf.float32, shape=[None, 1], name='y')
     loss = tf.losses.mean_squared_error(y, out)
     return loss
+
+
+def handle_test(spark_model, processed):
+    data = spark_model.fit(processed).transform(processed).take(10)
+    nb_errors = 0
+    for d in data:
+        lab = d['label']
+        predicted = 1 if d['predicted'][0] >= 0.5 else 0
+        if predicted != lab:
+            nb_errors += 1
+    assert nb_errors < len(data)
+
+
+def generate_random_data():
+    dat = [(1.0, Vectors.dense(np.random.normal(0,1,10))) for _ in range(0, 200)]
+    dat2 = [(0.0, Vectors.dense(np.random.normal(2,1,10))) for _ in range(0, 200)]
+    dat.extend(dat2)
+    random.shuffle(dat)
+    return spark.createDataFrame(dat, ["label", "features"])
 
 
 def test_spark_hogwild():
@@ -69,16 +88,8 @@ def test_spark_hogwild():
 
 
 def test_overlapping_guassians():
-    dat = [(1.0, Vectors.dense(np.random.normal(0,1,10))) for _ in range(0, 200)]
-    dat2 = [(0.0, Vectors.dense(np.random.normal(2,1,10))) for _ in range(0, 200)]
-    dat.extend(dat2)
-    random.shuffle(dat)
-    processed = spark.createDataFrame(dat, ["label", "features"])
-
-    first_graph = tf.Graph()
-    with first_graph.as_default() as g:
-        v = create_random_model()
-        mg = json_format.MessageToJson(tf.train.export_meta_graph())
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
 
     spark_model = SparkAsyncDL(
         inputCol='features',
@@ -93,26 +104,12 @@ def test_overlapping_guassians():
         predictionCol='predicted',
         labelCol='label'
     )
-
-    data = spark_model.fit(processed).transform(processed).take(10)
-    nb_errors = 0
-    for d in data:
-        lab = d['label']
-        predicted = d['predicted'][0]
-        if predicted != lab:
-            nb_errors += 1
-    assert nb_errors < len(data)
+    handle_test(spark_model, processed)
 
 
 def test_multi_partition_shuffle():
-    dat = [(1.0, Vectors.dense(np.random.normal(0,1,10))) for _ in range(0, 200)]
-    dat2 = [(0.0, Vectors.dense(np.random.normal(2,1,10))) for _ in range(0, 200)]
-    dat.extend(dat2)
-    random.shuffle(dat)
-    processed = spark.createDataFrame(dat, ["label", "features"])
-
+    processed = generate_random_data()
     mg = build_graph(create_random_model)
-
     spark_model = SparkAsyncDL(
         inputCol='features',
         tensorflowGraph=mg,
@@ -127,11 +124,49 @@ def test_multi_partition_shuffle():
         labelCol='label',
         partitionShuffles=2
     )
-    data = spark_model.fit(processed).transform(processed).take(10)
-    nb_errors = 0
-    for d in data:
-        lab = d['label']
-        predicted = d['predicted'][0]
-        if predicted != lab:
-            nb_errors += 1
-    assert nb_errors < len(data)
+    handle_test(spark_model, processed)
+
+
+def test_adam_optimizer_options():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='adam',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        verbose=1,
+        optimizerOptions=options
+    )
+    handle_test(spark_model, processed)
+
+
+def test_rmsprop():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_rmsprop_config(learning_rate=0.1, decay=0.95, momentum=0.1, centered=False)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='rmsprop',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        verbose=1,
+        optimizerOptions=options
+    )
+    handle_test(spark_model, processed)
+
