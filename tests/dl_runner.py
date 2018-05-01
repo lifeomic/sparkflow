@@ -38,7 +38,7 @@ def create_random_model():
     return loss
 
 
-def handle_test(spark_model, processed):
+def handle_assertions(spark_model, processed):
     data = spark_model.fit(processed).transform(processed).take(10)
     nb_errors = 0
     for d in data:
@@ -104,7 +104,49 @@ def test_overlapping_guassians():
         predictionCol='predicted',
         labelCol='label'
     )
-    handle_test(spark_model, processed)
+    handle_assertions(spark_model, processed)
+
+
+def test_adam_optimizer_options():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='adam',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        optimizerOptions=options
+    )
+    handle_assertions(spark_model, processed)
+
+
+def test_rmsprop():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_rmsprop_config(learning_rate=0.1, decay=0.95, momentum=0.1, centered=False)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='rmsprop',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        optimizerOptions=options
+    )
+    handle_assertions(spark_model, processed)
 
 
 def test_multi_partition_shuffle():
@@ -124,49 +166,5 @@ def test_multi_partition_shuffle():
         labelCol='label',
         partitionShuffles=2
     )
-    handle_test(spark_model, processed)
-
-
-def test_adam_optimizer_options():
-    processed = generate_random_data()
-    mg = build_graph(create_random_model)
-    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
-    spark_model = SparkAsyncDL(
-        inputCol='features',
-        tensorflowGraph=mg,
-        tfInput='x:0',
-        tfLabel='y:0',
-        tfOutput='outer/Sigmoid:0',
-        tfOptimizer='adam',
-        tfLearningRate=.1,
-        iters=25,
-        partitions=4,
-        predictionCol='predicted',
-        labelCol='label',
-        verbose=1,
-        optimizerOptions=options
-    )
-    handle_test(spark_model, processed)
-
-
-def test_rmsprop():
-    processed = generate_random_data()
-    mg = build_graph(create_random_model)
-    options = build_rmsprop_config(learning_rate=0.1, decay=0.95, momentum=0.1, centered=False)
-    spark_model = SparkAsyncDL(
-        inputCol='features',
-        tensorflowGraph=mg,
-        tfInput='x:0',
-        tfLabel='y:0',
-        tfOutput='outer/Sigmoid:0',
-        tfOptimizer='rmsprop',
-        tfLearningRate=.1,
-        iters=25,
-        partitions=4,
-        predictionCol='predicted',
-        labelCol='label',
-        verbose=1,
-        optimizerOptions=options
-    )
-    handle_test(spark_model, processed)
+    handle_assertions(spark_model, processed)
 
