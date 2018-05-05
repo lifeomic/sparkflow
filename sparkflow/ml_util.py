@@ -51,33 +51,33 @@ def calculate_weights(collected_weights):
 
 def predict_func(rows, graph_json, prediction, graph_weights, inp, activation, tf_input, tf_dropout=None, to_keep_dropout=False):
     rows = [r.asDict() for r in rows]
-    graph = tf.MetaGraphDef()
-    graph = json_format.Parse(graph_json, graph)
-    loaded_weights = json.loads(graph_weights)
-    loaded_weights = [np.asarray(x) for x in loaded_weights]
+    if len(rows) > 0:
+        graph = tf.MetaGraphDef()
+        graph = json_format.Parse(graph_json, graph)
+        loaded_weights = json.loads(graph_weights)
+        loaded_weights = [np.asarray(x) for x in loaded_weights]
 
-    A = []
-    for row in rows:
-        encoded = np.asarray(row[inp])
-        A.append(encoded)
-    A = np.asarray(A)
+        A = []
+        for row in rows:
+            encoded = np.asarray(row[inp])
+            A.append(encoded)
+        A = np.asarray(A)
 
-    new_graph = tf.Graph()
-    with tf.Session(graph=new_graph) as sess:
-        tf.train.import_meta_graph(graph)
-        sess.run(tf.global_variables_initializer())
-        tensorflow_set_weights(loaded_weights)
-        out_node = tf.get_default_graph().get_tensor_by_name(activation)
-        dropout_v = 1.0 if tf_dropout is not None and to_keep_dropout else 0.0
-        feed_dict = {tf_input: A} if tf_dropout is None else {tf_input: A, tf_dropout: dropout_v}
+        new_graph = tf.Graph()
+        with tf.Session(graph=new_graph) as sess:
+            tf.train.import_meta_graph(graph)
+            sess.run(tf.global_variables_initializer())
+            tensorflow_set_weights(loaded_weights)
+            out_node = tf.get_default_graph().get_tensor_by_name(activation)
+            dropout_v = 1.0 if tf_dropout is not None and to_keep_dropout else 0.0
+            feed_dict = {tf_input: A} if tf_dropout is None else {tf_input: A, tf_dropout: dropout_v}
 
-        pred = sess.run(out_node, feed_dict=feed_dict)
-        for i in range(0, len(rows)):
-            row = rows[i]
-            row[prediction] = Vectors.dense(pred[i])
-
-    rows = [Row(**a) for a in rows]
-    return rows
+            pred = sess.run(out_node, feed_dict=feed_dict)
+            for i in range(0, len(rows)):
+                row = rows[i]
+                row[prediction] = Vectors.dense(pred[i])
+        return [Row(**a) for a in rows]
+    return []
 
 
 def handle_features(data, is_supervised=False):
