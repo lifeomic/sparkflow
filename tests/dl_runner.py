@@ -57,6 +57,51 @@ def generate_random_data():
     return spark.createDataFrame(dat, ["label", "features"])
 
 
+def test_adam_optimizer_options():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='adam',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label',
+        optimizerOptions=options
+    )
+    handle_assertions(spark_model, processed)
+
+
+def test_small_sparse():
+    xor = [(0.0, Vectors.sparse(2,[0,1],[0.0,0.0])),
+           (0.0, Vectors.sparse(2,[0,1],[1.0,1.0])),
+           (1.0, Vectors.sparse(2,[0],[1.0])),
+           (1.0, Vectors.sparse(2,[1],[1.0]))]
+    processed = spark.createDataFrame(xor, ["label", "features"])
+
+    mg=build_graph(create_model)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='adam',
+        tfLearningRate=.1,
+        iters=35,
+        partitions=4,
+        predictionCol='predicted',
+        labelCol='label'
+    )
+    assert spark_model.fit(processed).transform(processed).collect() is not None
+
+
 def test_spark_hogwild():
     xor = [(0.0, Vectors.dense(np.array([0.0, 0.0]))),
            (0.0, Vectors.dense(np.array([1.0, 1.0]))),
@@ -107,27 +152,6 @@ def test_overlapping_guassians():
     handle_assertions(spark_model, processed)
 
 
-def test_adam_optimizer_options():
-    processed = generate_random_data()
-    mg = build_graph(create_random_model)
-    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
-    spark_model = SparkAsyncDL(
-        inputCol='features',
-        tensorflowGraph=mg,
-        tfInput='x:0',
-        tfLabel='y:0',
-        tfOutput='outer/Sigmoid:0',
-        tfOptimizer='adam',
-        tfLearningRate=.1,
-        iters=25,
-        partitions=4,
-        predictionCol='predicted',
-        labelCol='label',
-        optimizerOptions=options
-    )
-    handle_assertions(spark_model, processed)
-
-
 def test_rmsprop():
     processed = generate_random_data()
     mg = build_graph(create_random_model)
@@ -167,4 +191,5 @@ def test_multi_partition_shuffle():
         partitionShuffles=2
     )
     handle_assertions(spark_model, processed)
+
 
