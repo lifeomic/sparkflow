@@ -143,6 +143,28 @@ tfDropout: Specifies the dropout variable. This is important for predictions
 toKeepDropout: Due to conflicting TF implementations, this specifies whether the dropout function means to keep a percentage of values or to drop a percentage of values.
 verbose: Specifies log level of training results
 labelCol: Label column for training
+partitionShuffles: This will shuffle your data after iterations are completed, then run again. For example,
+if you have 2 partition shuffles and 100 iterations, it will run 100 iterations then reshuffle and run 100 iterations again.
+The repartition hits performance and should be used with care.
+optimizerOptions: Json options to apply to tensorflow optimizers.
+```
+
+#### Optimization Configuration
+
+As of Sparkflow version 0.2.1, Tensorflow optimization configuration options can be added to SparkAsyncDL for more control 
+over the optimizer. While the user can supply the configuration json directly, there are a few provided utility 
+functions that include the parameters necessary. An example is provided below.
+
+```python
+
+from sparkflow.graph_utils import build_adam_config
+
+
+adam_config = build_adam_config(learning_rate=0.001, beta1=0.9, beta2=0.999)
+spark_model = SparkAsyncDL(
+    ...,
+    optimizerOptions=adam_config
+)
 ```
 
 ## Running

@@ -15,13 +15,18 @@ import json
 
 
 def build_optimizer(optimizer_name, learning_rate, optimizer_options):
+
     available_optimizers = {
         'adam': tf.train.AdamOptimizer,
         'rmsprop': tf.train.RMSPropOptimizer,
         'momentum': tf.train.MomentumOptimizer,
         'adadelta': tf.train.AdadeltaOptimizer,
         'adagrad': tf.train.AdagradOptimizer,
-        'gradient_descent': tf.train.GradientDescentOptimizer
+        'gradient_descent': tf.train.GradientDescentOptimizer,
+        'adagrad_da': tf.train.AdagradDAOptimizer,
+        'ftrl': tf.train.FtrlOptimizer,
+        'proximal_adagrad': tf.train.ProximalAdagradOptimizer,
+        'proximal_gradient_descent': tf.train.ProximalGradientDescentOptimizer
     }
 
     if optimizer_options is None:
