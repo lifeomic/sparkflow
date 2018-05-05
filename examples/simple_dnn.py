@@ -4,6 +4,7 @@ from pyspark.ml.feature import VectorAssembler, OneHotEncoder
 from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncDLModel
 from pyspark.sql.functions import rand
 from sparkflow.graph_utils import build_graph
+from sparkflow.graph_utils import build_adam_config
 
 
 def small_model():
@@ -25,6 +26,7 @@ if __name__ == '__main__':
 
     df = spark.read.option("inferSchema", "true").csv('mnist_train.csv').orderBy(rand())
     mg = build_graph(small_model)
+    adam_config = build_adam_config(learning_rate=0.001, beta1=0.9, beta2=0.999)
 
     va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features').transform(df)
     encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False).transform(va).select(['features', 'labels'])
@@ -37,7 +39,6 @@ if __name__ == '__main__':
         tfLabel='y:0',
         tfOutput='out:0',
         tfOptimizer='adam',
-        tfLearningRate=.0001,
         miniBatchSize=300,
         miniStochasticIters=-1,
         shufflePerIter=True,
@@ -45,7 +46,8 @@ if __name__ == '__main__':
         predictionCol='predicted',
         labelCol='labels',
         partitions=4,
-        verbose=1
+        verbose=1,
+        optimizerOptions=adam_config
     )
 
     spark_model.fit(encoded).save('simple_dnn')
