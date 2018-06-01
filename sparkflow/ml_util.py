@@ -57,11 +57,7 @@ def predict_func(rows, graph_json, prediction, graph_weights, inp, activation, t
         loaded_weights = json.loads(graph_weights)
         loaded_weights = [np.asarray(x) for x in loaded_weights]
 
-        A = []
-        for row in rows:
-            encoded = np.asarray(row[inp])
-            A.append(encoded)
-        A = np.asarray(A)
+        A = [np.asarray(row[inp]) for row in rows]
 
         new_graph = tf.Graph()
         with tf.Session(graph=new_graph) as sess:

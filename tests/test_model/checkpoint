@@ -1,0 +1,2 @@
+model_checkpoint_path: "to_load"
+all_model_checkpoint_paths: "to_load"
