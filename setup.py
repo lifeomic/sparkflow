@@ -2,7 +2,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 setup(name='sparkflow',
-      version='0.2.2',
+      version='0.3.0',
       description='Deep learning on Spark with Tensorflow',
       keywords = ['tensorflow', 'spark', 'sparkflow', 'machine learning', 'lifeomic', 'deep learning'],
       url='https://github.com/lifeomic/sparkflow',
