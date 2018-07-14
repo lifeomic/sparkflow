@@ -40,7 +40,7 @@ def put_deltas_to_server(delta, master_url='localhost:5000'):
 def handle_model(data, graph_json, tfInput, tfLabel=None,
                  master_url='localhost:5000', iters=1000,
                  mini_batch_size=-1, shuffle=True,
-                 mini_stochastic_iters=-1, verbose=0):
+                 mini_stochastic_iters=-1, verbose=0, loss_callback=None):
     is_supervised = tfLabel is not None
     features, labels = handle_features(data, is_supervised)
 
@@ -83,10 +83,13 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
                     gradients.append(grads[x][0].eval(feed_dict=feed_dict))
                 put_deltas_to_server(gradients, master_url)
 
-            if verbose:
+            if verbose or loss_callback:
                 feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, -1)
-                losses = sess.run(loss_variable, feed_dict= feed_dict)
-                print("Partition Id: %s, Iteration: %i, Loss: %f" % (partition_id, i, losses))
+                loss = sess.run(loss_variable, feed_dict=feed_dict)
+                if verbose:
+                    print("Partition Id: %s, Iteration: %i, Loss: %f" % (partition_id, i, loss))
+                if loss_callback:
+                    loss_callback(loss, i, partition_id)
 
 
 class HogwildSparkModel(object):
@@ -109,7 +112,8 @@ class HogwildSparkModel(object):
                  mini_stochastic_iters=-1,
                  shuffle=True,
                  verbose=0,
-                 partition_shuffles=1):
+                 partition_shuffles=1,
+                 loss_callback=None):
         self.tensorflowGraph = tensorflowGraph
         self.iters = iters
         self.tfInput = tfInput
@@ -123,6 +127,7 @@ class HogwildSparkModel(object):
         self.verbose = verbose
         self.shuffle = shuffle
         self.partition_shuffles= partition_shuffles
+        self.loss_callback = loss_callback
         self.master_url = master_url if master_url is not None else HogwildSparkModel.determine_master()
 
     @staticmethod
@@ -237,7 +242,8 @@ class HogwildSparkModel(object):
                 rdd.foreachPartition(lambda x: handle_model(x, tgraph, tfInput,
                                                             tfLabel=tfLabel, master_url=master_url,
                                                             iters=iters, mini_batch_size=mbs, shuffle=shuffle,
-                                                            mini_stochastic_iters=msi, verbose=verbose))
+                                                            mini_stochastic_iters=msi, verbose=verbose,
+                                                            loss_callback=self.loss_callback))
                 if self.partition_shuffles - i > 1:
                     num_partitions = rdd.getNumPartitions()
                     rdd = rdd.repartition(num_partitions)

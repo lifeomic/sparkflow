@@ -63,7 +63,7 @@ p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
 p.write().overwrite().save("location")
 ``` 
 
-For a couple more, visit the examples directory. More examples will be coming up soon.
+For a couple more, visit the examples directory. 
 
 
 ## Documentation
@@ -167,16 +167,33 @@ spark_model = SparkAsyncDL(
 )
 ```
 
+#### Loading pre-trained Tensorflow model
+
+To load a pre-trained Tensorflow model and use it as a spark pipeline, it can be achieved using the following code:
+
+```python
+from sparkflow.tensorflow_model_loader import load_tensorflow_model
+
+df = spark.read.parquet("data")
+loaded_model = load_tensorflow_model(
+    path="./test_model/to_load",
+    inputCol="features",
+    tfInput="x:0",
+    tfOutput="out/Sigmoid:0"
+)
+data_with_predictions = loaded_model.transform(df)
+```
+
+
 ## Running
 
 One big thing to remember, especially for larger networks, is to add the `--executor cores 1` option to spark to ensure
-each instance is only training one network. This will also be needed for gpu training as well.
+each instance is only training one copy of the network. This will especially be needed for gpu training as well.
 
 
 ## Future planned features 
 
 * Hyperopt implementation for smaller and larger datasets
-* Load pre-trained Tensorflow models, and put them into a valid Spark Pipeline Model
 * AWS EMR guides
 
 
