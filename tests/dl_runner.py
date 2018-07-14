@@ -70,10 +70,10 @@ def test_load_raw_model():
         "x:0",
         "out/Sigmoid:0"
     ).transform(processed).collect()
-    assert loaded[0]['predicted'] < 0.1
-    assert loaded[1]['predicted'] < 0.1
-    assert loaded[2]['predicted'] > 0.7
-    assert loaded[3]['predicted'] > 0.7
+    assert loaded[0]['predicted'][0] < 0.1
+    assert loaded[1]['predicted'][0] < 0.1
+    assert loaded[2]['predicted'][0] > 0.7
+    assert loaded[3]['predicted'][0] > 0.7
 
 
 def test_adam_optimizer_options():

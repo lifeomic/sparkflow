@@ -236,6 +236,7 @@ class HogwildSparkModel(object):
             iters = self.iters
             mbs = self.mini_batch
             msi = self.mini_stochastic_iters
+            cb = self.loss_callback
             verbose = self.verbose
             shuffle = self.shuffle
             for i in range(self.partition_shuffles):
@@ -243,7 +244,7 @@ class HogwildSparkModel(object):
                                                             tfLabel=tfLabel, master_url=master_url,
                                                             iters=iters, mini_batch_size=mbs, shuffle=shuffle,
                                                             mini_stochastic_iters=msi, verbose=verbose,
-                                                            loss_callback=self.loss_callback))
+                                                            loss_callback=cb))
                 if self.partition_shuffles - i > 1:
                     num_partitions = rdd.getNumPartitions()
                     rdd = rdd.repartition(num_partitions)
