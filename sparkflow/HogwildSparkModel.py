@@ -1,6 +1,6 @@
 from flask import Flask, request
 import pickle
-from ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
+from sparkflow.ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
 
 from google.protobuf import json_format
 import urllib2
@@ -51,12 +51,13 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
         tf.train.import_meta_graph(gd)
         loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
         sess.run(tf.global_variables_initializer())
-        grads = tf.gradients(loss_variable, tf.trainable_variables())
-        grads = list(zip(grads, tf.trainable_variables()))
+        trainable_variables = tf.trainable_variables()
+        grads = tf.gradients(loss_variable, trainable_variables)
+        grads = list(zip(grads, trainable_variables))
         partition_id = uuid.uuid4().hex
         for i in range(0, iters):
             weights = get_server_weights(master_url)
-            tensorflow_set_weights(weights)
+            tensorflow_set_weights(weights, vs=trainable_variables)
             if shuffle:
                 features, labels = handle_shuffle(features, labels)
 
@@ -71,7 +72,7 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
                 for r in range(0, len(features), mini_batch_size):
                     gradients = []
                     weights = get_server_weights(master_url)
-                    tensorflow_set_weights(weights)
+                    tensorflow_set_weights(weights, vs=trainable_variables)
                     feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, mini_batch_size, idx=r)
                     for x in range(len(grads)):
                         gradients.append(grads[x][0].eval(feed_dict=feed_dict))
@@ -173,8 +174,9 @@ class HogwildSparkModel(object):
         with ng.as_default():
             tf.train.import_meta_graph(metagraph)
             loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
-            grads = tf.gradients(loss_variable, tf.trainable_variables())
-            grads = list(zip(grads, tf.trainable_variables()))
+            trainable_variables = tf.trainable_variables()
+            grads = tf.gradients(loss_variable, trainable_variables)
+            grads = list(zip(grads, trainable_variables))
             train_op = optimizer.apply_gradients(grads)
             init = tf.global_variables_initializer()
 
@@ -182,7 +184,7 @@ class HogwildSparkModel(object):
         with ng.as_default():
             with glob_session.as_default():
                 glob_session.run(init)
-                self.weights = tensorflow_get_weights()
+                self.weights = tensorflow_get_weights(trainable_variables)
 
         cont = itertools.count()
         lock_acquired = self.acquire_lock
