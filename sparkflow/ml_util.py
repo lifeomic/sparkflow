@@ -6,16 +6,18 @@ from pyspark.ml.linalg import Vectors
 from pyspark.sql import Row
 
 
-def tensorflow_get_weights():
-    vs = tf.trainable_variables()
+def tensorflow_get_weights(vs=None):
+    if not vs:
+        vs = tf.trainable_variables()
     values = tf.get_default_session().run(vs)
     return values
 
 
-def tensorflow_set_weights(weights):
+def tensorflow_set_weights(weights, vs=None):
     assign_ops = []
     feed_dict = {}
-    vs = tf.trainable_variables()
+    if not vs:
+        vs = tf.trainable_variables()
     zipped_values = zip(vs, weights)
     for var, value in zipped_values:
         value = np.asarray(value)
