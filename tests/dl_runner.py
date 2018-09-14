@@ -7,8 +7,6 @@ import random
 from sparkflow.tensorflow_async import SparkAsyncDL
 from sparkflow.HogwildSparkModel import HogwildSparkModel
 from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_config
-from sparkflow.tensorflow_model_loader import load_tensorflow_model
-
 random.seed(12345)
 
 spark = SparkSession.builder \
