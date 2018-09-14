@@ -79,24 +79,6 @@ def test_adam_optimizer_options():
     handle_assertions(spark_model, processed)
 
 
-def test_load_raw_model():
-    xor = [(0.0, Vectors.sparse(2,[0,1],[0.0,0.0])),
-           (0.0, Vectors.sparse(2,[0,1],[1.0,1.0])),
-           (1.0, Vectors.sparse(2,[0],[1.0])),
-           (1.0, Vectors.sparse(2,[1],[1.0]))]
-    processed = spark.createDataFrame(xor, ["label", "features"])
-    loaded = load_tensorflow_model(
-        "./test_model/to_load",
-        "features",
-        "x:0",
-        "out/Sigmoid:0"
-    ).transform(processed).collect()
-    assert loaded[0]['predicted'][0] < 0.1
-    assert loaded[1]['predicted'][0] < 0.1
-    assert loaded[2]['predicted'][0] > 0.7
-    assert loaded[3]['predicted'][0] > 0.7
-
-
 def test_small_sparse():
     xor = [(0.0, Vectors.sparse(2,[0,1],[0.0,0.0])),
            (0.0, Vectors.sparse(2,[0,1],[1.0,1.0])),
