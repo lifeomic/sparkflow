@@ -7,10 +7,7 @@ import random
 from sparkflow.tensorflow_async import SparkAsyncDL
 from sparkflow.HogwildSparkModel import HogwildSparkModel
 from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_config
-from sparkflow.tensorflow_model_loader import load_tensorflow_model
-
 random.seed(12345)
-
 
 spark = SparkSession.builder \
     .appName("variant-deep") \
@@ -58,24 +55,6 @@ def generate_random_data():
     return spark.createDataFrame(dat, ["label", "features"])
 
 
-def test_load_raw_model():
-    xor = [(0.0, Vectors.sparse(2,[0,1],[0.0,0.0])),
-           (0.0, Vectors.sparse(2,[0,1],[1.0,1.0])),
-           (1.0, Vectors.sparse(2,[0],[1.0])),
-           (1.0, Vectors.sparse(2,[1],[1.0]))]
-    processed = spark.createDataFrame(xor, ["label", "features"])
-    loaded = load_tensorflow_model(
-        "./test_model/to_load",
-        "features",
-        "x:0",
-        "out/Sigmoid:0"
-    ).transform(processed).collect()
-    assert loaded[0]['predicted'][0] < 0.1
-    assert loaded[1]['predicted'][0] < 0.1
-    assert loaded[2]['predicted'][0] > 0.7
-    assert loaded[3]['predicted'][0] > 0.7
-
-
 def test_adam_optimizer_options():
     processed = generate_random_data()
     mg = build_graph(create_random_model)
@@ -89,9 +68,10 @@ def test_adam_optimizer_options():
         tfOptimizer='adam',
         tfLearningRate=.1,
         iters=25,
-        partitions=4,
+        partitions=3,
         predictionCol='predicted',
         labelCol='label',
+        verbose=1,
         optimizerOptions=options
     )
     handle_assertions(spark_model, processed)
