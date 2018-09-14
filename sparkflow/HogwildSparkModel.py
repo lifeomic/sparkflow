@@ -3,28 +3,22 @@ import pickle
 from sparkflow.ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
 
 from google.protobuf import json_format
-import urllib2
 import socket
 import time
 import tensorflow as tf
 import itertools
 from sparkflow.RWLock import RWLock
-import logging
 from multiprocessing import Process
 import uuid
-
-log = logging.getLogger("werkzeug")
-log.setLevel(logging.ERROR)
+import requests
 
 
 def get_server_weights(master_url='localhost:5000'):
     """
     This will get the raw weights, pickle load them, and return.
     """
-    request = urllib2.Request('http://{0}/parameters'.format(master_url),
-                              headers={'Content-Type': 'application/lifeomic'})
-    ret = urllib2.urlopen(request).read()
-    weights = pickle.loads(ret)
+    r = requests.get('http://{0}/parameters'.format(master_url))
+    weights = pickle.loads(r.content)
     return weights
 
 
@@ -32,9 +26,7 @@ def put_deltas_to_server(delta, master_url='localhost:5000'):
     """
     This updates the master parameters. We just use simple pickle serialization here.
     """
-    request = urllib2.Request('http://{0}/update'.format(master_url),
-                              pickle.dumps(delta, -1), headers={'Content-Type': 'application/lifeomic'})
-    return urllib2.urlopen(request).read()
+    requests.post('http://{0}/update'.format(master_url), data=pickle.dumps(delta, -1))
 
 
 def handle_model(data, graph_json, tfInput, tfLabel=None,
@@ -67,7 +59,10 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
                     feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, mini_batch_size)
                     for x in range(len(grads)):
                         gradients.append(grads[x][0].eval(feed_dict=feed_dict))
-                    put_deltas_to_server(gradients, master_url)
+                    try:
+                        put_deltas_to_server(gradients, master_url)
+                    except Exception:
+                        print("Timeout error from partition %s" % partition_id)
             elif mini_batch_size >= 1:
                 for r in range(0, len(features), mini_batch_size):
                     gradients = []
@@ -76,13 +71,19 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
                     feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, mini_batch_size, idx=r)
                     for x in range(len(grads)):
                         gradients.append(grads[x][0].eval(feed_dict=feed_dict))
-                    put_deltas_to_server(gradients, master_url)
+                    try:
+                        put_deltas_to_server(gradients, master_url)
+                    except Exception:
+                        print("Timeout error from partition %s" % partition_id)
             else:
                 gradients = []
                 feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, mini_batch_size)
                 for x in range(len(grads)):
                     gradients.append(grads[x][0].eval(feed_dict=feed_dict))
-                put_deltas_to_server(gradients, master_url)
+                try:
+                    put_deltas_to_server(gradients, master_url)
+                except Exception:
+                    print("Timeout error from partition %s" % partition_id)
 
             if verbose or loss_callback:
                 feed_dict = handle_feed_dict(features, tfInput, tfLabel, labels, -1)
@@ -147,6 +148,7 @@ class HogwildSparkModel(object):
         Starts the server with a copy of the argument for weird tensorflow multiprocessing issues
         """
         self.server = Process(target=self.start_service, args=(tg, optimizer))
+        self.server.daemon = True
         self.server.start()
 
     def stop_server(self):
@@ -168,6 +170,7 @@ class HogwildSparkModel(object):
         lock = RWLock()
 
         server = tf.train.Server.create_local_server()
+        server.start()
         graph = tf.MetaGraphDef()
         metagraph = json_format.Parse(tensorflowGraph, graph)
         ng = tf.Graph()
@@ -227,7 +230,7 @@ class HogwildSparkModel(object):
 
             return 'completed'
 
-        self.app.run(host='0.0.0.0', debug=True, threaded=True, use_reloader=False, port=5000)
+        self.app.run(host='0.0.0.0', debug=True, use_reloader=False, threaded=True, port=5000)
 
     def train(self, rdd):
         try:
@@ -255,5 +258,5 @@ class HogwildSparkModel(object):
             return server_weights
         except Exception as e:
             self.stop_server()
-            raise Exception(e.message)
+            raise e
 

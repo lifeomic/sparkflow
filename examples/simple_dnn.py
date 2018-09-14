@@ -5,6 +5,7 @@ from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncDLModel
 from pyspark.sql.functions import rand
 from sparkflow.graph_utils import build_graph
 from sparkflow.graph_utils import build_adam_config
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 
 def small_model():
@@ -40,16 +41,19 @@ if __name__ == '__main__':
         tfOutput='out:0',
         tfOptimizer='adam',
         miniBatchSize=300,
-        miniStochasticIters=-1,
+        miniStochasticIters=1,
         shufflePerIter=True,
-        iters=20,
+        iters=50,
         predictionCol='predicted',
         labelCol='labels',
-        partitions=4,
+        partitions=3,
         verbose=1,
         optimizerOptions=adam_config
     )
 
     spark_model.fit(encoded).save('simple_dnn')
-    x = SparkAsyncDLModel.load("simple_dnn").transform(encoded).take(10)
-    print(x)
+    predictions = SparkAsyncDLModel.load("simple_dnn").transform(encoded)
+    evaluator = MulticlassClassificationEvaluator(
+        labelCol="labels", predictionCol="predicted", metricName="accuracy")
+    accuracy = evaluator.evaluate(predictions)
+    print("Test Error = %g" % (1.0 - accuracy))

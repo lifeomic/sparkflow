@@ -34,11 +34,11 @@ if __name__ == '__main__':
         tfInput='x:0',
         tfLabel=None,
         tfOutput='out:0',
-        tfOptimizer='rmsprop',
+        tfOptimizer='adam',
         tfLearningRate=.001,
         iters=10,
         predictionCol='predicted',
-        partitions=4,
+        partitions=3,
         miniBatchSize=256,
         verbose=1
     ).fit(na)

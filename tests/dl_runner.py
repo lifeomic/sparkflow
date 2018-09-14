@@ -10,7 +10,7 @@ from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_
 from sparkflow.tensorflow_model_loader import load_tensorflow_model
 
 random.seed(12345)
-
+print(tf.__version__)
 
 spark = SparkSession.builder \
     .appName("variant-deep") \
@@ -58,6 +58,28 @@ def generate_random_data():
     return spark.createDataFrame(dat, ["label", "features"])
 
 
+def test_adam_optimizer_options():
+    processed = generate_random_data()
+    mg = build_graph(create_random_model)
+    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='outer/Sigmoid:0',
+        tfOptimizer='adam',
+        tfLearningRate=.1,
+        iters=25,
+        partitions=3,
+        predictionCol='predicted',
+        labelCol='label',
+        verbose=1,
+        optimizerOptions=options
+    )
+    handle_assertions(spark_model, processed)
+
+
 def test_load_raw_model():
     xor = [(0.0, Vectors.sparse(2,[0,1],[0.0,0.0])),
            (0.0, Vectors.sparse(2,[0,1],[1.0,1.0])),
@@ -74,27 +96,6 @@ def test_load_raw_model():
     assert loaded[1]['predicted'][0] < 0.1
     assert loaded[2]['predicted'][0] > 0.7
     assert loaded[3]['predicted'][0] > 0.7
-
-
-def test_adam_optimizer_options():
-    processed = generate_random_data()
-    mg = build_graph(create_random_model)
-    options = build_adam_config(learning_rate=0.1, beta1=0.85, beta2=0.98, epsilon=1e-8)
-    spark_model = SparkAsyncDL(
-        inputCol='features',
-        tensorflowGraph=mg,
-        tfInput='x:0',
-        tfLabel='y:0',
-        tfOutput='outer/Sigmoid:0',
-        tfOptimizer='adam',
-        tfLearningRate=.1,
-        iters=25,
-        partitions=4,
-        predictionCol='predicted',
-        labelCol='label',
-        optimizerOptions=options
-    )
-    handle_assertions(spark_model, processed)
 
 
 def test_small_sparse():
