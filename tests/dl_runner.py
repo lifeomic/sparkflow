@@ -10,7 +10,6 @@ from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_
 from sparkflow.tensorflow_model_loader import load_tensorflow_model
 
 random.seed(12345)
-print(tf.__version__)
 
 spark = SparkSession.builder \
     .appName("variant-deep") \
