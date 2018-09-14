@@ -121,7 +121,9 @@ class HogwildSparkModel(object):
         self.tfInput = tfInput
         self.tfLabel = tfLabel
         self.acquire_lock = acquire_lock
-        self.start_server(tensorflowGraph, optimizer)
+        graph = tf.MetaGraphDef()
+        metagraph = json_format.Parse(tensorflowGraph, graph)
+        self.start_server(metagraph, optimizer)
         #allow server to start up on separate thread
         time.sleep(serverStartup)
         self.mini_batch = mini_batch
@@ -158,7 +160,7 @@ class HogwildSparkModel(object):
         self.server.terminate()
         self.server.join()
 
-    def start_service(self, tensorflowGraph, optimizer):
+    def start_service(self, metagraph, optimizer):
         """
         Asynchronous flask service. This may be a bit confusing why the server starts here and not init.
         It is basically because this is ran in a separate process, and when python call fork, we want to fork from this
@@ -170,9 +172,6 @@ class HogwildSparkModel(object):
         lock = RWLock()
 
         server = tf.train.Server.create_local_server()
-        server.start()
-        graph = tf.MetaGraphDef()
-        metagraph = json_format.Parse(tensorflowGraph, graph)
         ng = tf.Graph()
         with ng.as_default():
             tf.train.import_meta_graph(metagraph)
