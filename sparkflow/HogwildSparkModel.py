@@ -218,7 +218,7 @@ class HogwildSparkModel(object):
                 with glob_session.as_default():
                     try:
                         glob_session.run(train_op, feed_dict=nu_feed)
-                        self.weights = tensorflow_get_weights()
+                        self.weights = tensorflow_get_weights(trainable_variables)
                     except:
                         error_cnt = cont.next()
                         if error_cnt >= max_errors:
