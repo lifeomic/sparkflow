@@ -44,5 +44,3 @@ VOLUME /mnt/sparkflow
 WORKDIR /mnt/sparkflow
 
 COPY . /mnt/sparkflow
-
-
