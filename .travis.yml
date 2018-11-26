@@ -1,0 +1,26 @@
+sudo: required
+
+language: minimal
+
+env:
+  global:
+    - DOCKER_COMPOSE_VERSION=1.22.0
+  matrix:
+    - PYTHON_VERSION=3.6 TEST_SUITE=python-tests
+    - PYTHON_VERSION=2.7 TEST_SUITE=python-tests
+
+services:
+  - docker
+
+before_install:
+  # update docker compose to the specified version, https://docs.travis-ci.com/user/docker/#using-docker-compose
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+install :
+  - docker build -t local-test .
+
+script:
+  - docker run --rm local-test:latest bash -i -c "python tests/dl_runner.py"
