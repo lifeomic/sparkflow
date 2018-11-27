@@ -13,6 +13,11 @@ import uuid
 import requests
 
 
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+
 def get_server_weights(master_url='localhost:5000'):
     """
     This will get the raw weights, pickle load them, and return.
@@ -229,7 +234,7 @@ class HogwildSparkModel(object):
 
             return 'completed'
 
-        self.app.run(host='0.0.0.0', debug=True, use_reloader=False, threaded=True, port=5000)
+        self.app.run(host='0.0.0.0', use_reloader=False, threaded=True, port=5000)
 
     def train(self, rdd):
         try:

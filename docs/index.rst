@@ -3,8 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to SparkFlow's documentation!
+SparkFlow
 =====================================
+Combines the power of Apache Spark Pipelines with TensorFlow
 
 .. toctree::
    :maxdepth: 2
