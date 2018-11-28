@@ -261,5 +261,6 @@ class SparkFlowTests(PysparkTest):
         )
         self.handle_assertions(spark_model, processed)
 
+
 if __name__ == '__main__':
     unittest.main()

@@ -39,7 +39,7 @@ def load_byte_array(stop_words):
         dmp = zlib.decompress(dmp)
         py_obj = dill.loads(dmp)
         return py_obj
-    dmp = bytearray([int(i) for i in swords])
+    dmp = bytes([int(i) for i in swords])
     dmp = zlib.decompress(dmp)
     py_obj = dill.loads(dmp)
     return py_obj
