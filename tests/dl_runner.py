@@ -1,10 +1,13 @@
 from pyspark.sql import SparkSession
 import tensorflow as tf
 from pyspark.ml.linalg import Vectors
+from pyspark.ml.pipeline import Pipeline
+from sparkflow.pipeline_util import PysparkPipelineWrapper
+from pyspark.ml.pipeline import PipelineModel
 import numpy as np
 from google.protobuf import json_format
 import random
-from sparkflow.tensorflow_async import SparkAsyncDL
+from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncDLModel
 from sparkflow.HogwildSparkModel import HogwildSparkModel
 from sparkflow.graph_utils import build_graph, build_adam_config, build_rmsprop_config
 import unittest
@@ -59,15 +62,20 @@ class SparkFlowTests(PysparkTest):
         loss = tf.losses.mean_squared_error(y, out)
         return loss
 
-    def handle_assertions(self, spark_model, processed):
-        data = spark_model.fit(processed).transform(processed).take(10)
+    @staticmethod
+    def calculate_errors(data):
         nb_errors = 0
         for d in data:
             lab = d['label']
             predicted = 1 if d['predicted'][0] >= 0.5 else 0
             if predicted != lab:
                 nb_errors += 1
-        assert nb_errors < len(data)
+        return nb_errors
+
+    def handle_assertions(self, spark_model, processed):
+        data = spark_model.fit(processed).transform(processed).take(10)
+        nb_errors = SparkFlowTests.calculate_errors(data)
+        self.assertTrue(nb_errors < len(data))
 
     def generate_random_data(self):
         dat = [(1.0, Vectors.dense(np.random.normal(0,1,10))) for _ in range(0, 200)]
@@ -75,6 +83,52 @@ class SparkFlowTests(PysparkTest):
         dat.extend(dat2)
         random.shuffle(dat)
         return self.spark.createDataFrame(dat, ["label", "features"])
+
+    def test_save_model(self):
+        processed = self.generate_random_data()
+        mg = build_graph(SparkFlowTests.create_random_model)
+        spark_model = SparkAsyncDL(
+            inputCol='features',
+            tensorflowGraph=mg,
+            tfInput='x:0',
+            tfLabel='y:0',
+            tfOutput='outer/Sigmoid:0',
+            tfOptimizer='adam',
+            tfLearningRate=.1,
+            iters=20,
+            partitions=2,
+            predictionCol='predicted',
+            labelCol='label'
+        )
+        fitted = spark_model.fit(processed)
+        fitted.save('saved_model')
+        model = SparkAsyncDLModel.load("saved_model")
+        data = model.transform(processed).take(10)
+        nb_errors = SparkFlowTests.calculate_errors(data)
+        self.assertTrue(nb_errors < len(data))
+
+    def test_save_pipeline(self):
+        processed = self.generate_random_data()
+        mg = build_graph(SparkFlowTests.create_random_model)
+        spark_model = SparkAsyncDL(
+            inputCol='features',
+            tensorflowGraph=mg,
+            tfInput='x:0',
+            tfLabel='y:0',
+            tfOutput='outer/Sigmoid:0',
+            tfOptimizer='adam',
+            tfLearningRate=.1,
+            iters=20,
+            partitions=2,
+            predictionCol='predicted',
+            labelCol='label'
+        )
+        p = Pipeline(stages=[spark_model]).fit(processed)
+        p.write().overwrite().save('example_pipeline')
+        p = PysparkPipelineWrapper.unwrap(PipelineModel.load('example_pipeline'))
+        data = p.transform(processed).take(10)
+        nb_errors = SparkFlowTests.calculate_errors(data)
+        self.assertTrue(nb_errors < len(data))
 
     def test_adam_optimizer_options(self):
         processed = self.generate_random_data()
@@ -144,7 +198,7 @@ class SparkFlowTests(PysparkTest):
 
         try:
             weights = spark_model.train(processed)
-            assert len(weights) > 0
+            self.assertTrue(len(weights) > 0)
         except Exception as e:
             spark_model.stop_server()
             raise Exception(e.message)

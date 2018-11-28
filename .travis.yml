@@ -13,7 +13,7 @@ services:
   - docker
 
 install :
-  - docker build -t local-test .
+  - docker build -t local-test --build-arg PYTHON_VERSION=$PYTHON_VERSION .
 
 script:
   - docker run --rm local-test:latest bash -i -c "python tests/dl_runner.py"
