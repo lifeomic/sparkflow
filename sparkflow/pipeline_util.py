@@ -5,11 +5,13 @@ from pyspark.ml.feature import StopWordsRemover
 from pyspark.ml.wrapper import JavaParams
 from pyspark.context import SparkContext
 import zlib
+import sys
 
 """
 based off below stackoverflow thread. Changes were made for performance.
 credit: https://stackoverflow.com/questions/41399399/serialize-a-custom-transformer-using-python-to-be-used-within-a-pyspark-ml-pipel
 """
+
 
 class PysparkObjId(object):
     """
@@ -27,6 +29,21 @@ class PysparkObjId(object):
     @staticmethod
     def _getCarrierClass(javaName=False):
         return 'org.apache.spark.ml.feature.StopWordsRemover' if javaName else StopWordsRemover
+
+
+def load_byte_array(stop_words):
+    swords = stop_words[0].split(',')[0:-1]
+    if sys.version_info[0] < 3:
+        lst = [chr(int(d)) for d in swords]
+        dmp = ''.join(lst)
+        dmp = zlib.decompress(dmp)
+        py_obj = dill.loads(dmp)
+        return py_obj
+    dmp = bytearray([int(i) for i in swords])
+    dmp = zlib.decompress(dmp)
+    py_obj = dill.loads(dmp)
+    return py_obj
+
 
 class PysparkPipelineWrapper(object):
     """
@@ -47,11 +64,7 @@ class PysparkPipelineWrapper(object):
                 stages[i] = PysparkPipelineWrapper.unwrap(stage)
             if isinstance(stage, PysparkObjId._getCarrierClass()) and stage.getStopWords()[-1] == PysparkObjId._getPyObjId():
                 swords = stage.getStopWords()[:-1] # strip the id
-                swords = swords[0].split(',')[0:-1]
-                lst = [chr(int(d)) for d in swords]
-                dmp = ''.join(lst)
-                dmp = zlib.decompress(dmp)
-                py_obj = dill.loads(dmp)
+                py_obj = load_byte_array(swords)
                 stages[i] = py_obj
 
         if isinstance(pipeline, Pipeline):
@@ -59,6 +72,7 @@ class PysparkPipelineWrapper(object):
         else:
             pipeline.stages = stages
         return pipeline
+
 
 class PysparkReaderWriter(object):
     """
@@ -90,12 +104,7 @@ class PysparkReaderWriter(object):
         and convert, via dill, back to our python instance.
         """
         swords = java_obj.getStopWords()[:-1] # strip the id
-        swords = swords[0].split(',')[0:-1]
-        lst = [chr(int(d)) for d in swords] # convert from string integer list to bytes
-        dmp = ''.join(lst)
-        dmp = zlib.decompress(dmp)
-        py_obj = dill.loads(dmp)
-        return py_obj
+        return load_byte_array(swords)
 
     def _to_java(self):
         """
@@ -106,7 +115,8 @@ class PysparkReaderWriter(object):
         dmp = dill.dumps(self)
         dmp = zlib.compress(dmp)
         sc = SparkContext._active_spark_context
-        pylist = [str(ord(d))+ ',' for d in dmp] # convert bytes to string integer list
+        pylist = [str(i) + ',' for i in bytearray(dmp)]
+        # convert bytes to string integer list
         pylist = [''.join(pylist)]
         pylist.append(PysparkObjId._getPyObjId()) # add our id so PysparkPipelineWrapper can id us.
         java_class = sc._gateway.jvm.java.lang.String
