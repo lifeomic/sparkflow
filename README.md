@@ -5,6 +5,9 @@ in using Tensorflow on Spark. With SparkFlow, you can easily integrate your deep
 Underneath, SparkFlow uses a parameter server to train the Tensorflow network in a distributed manner. Through the api,
 the user can specify the style of training, whether that is Hogwild or async with locking.
 
+[![Build Status](https://api.travis-ci.org/lifeomic/sparkflow.svg?branch=master)](https://travis-ci.org/lifeomic/sparkflow)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/lifeomic/sparkflow/blob/master/LICENSE)
+
 ## Why should I use this?
 While there are other libraries that use Tensorflow on Apache Spark, Sparkflow's objective is to work seemlessly 
 with ML Pipelines, provide a simple interface for training Tensorflow graphs, and give basic abstractions for 
@@ -189,6 +192,25 @@ data_with_predictions = loaded_model.transform(df)
 
 One big thing to remember, especially for larger networks, is to add the `--executor cores 1` option to spark to ensure
 each instance is only training one copy of the network. This will especially be needed for gpu training as well.
+
+
+## Contributing
+
+Contributions are always welcome. This could be fixing a bug, changing documentation, or adding a new feature. To test 
+new changes against existing tests, we have provided a Docker container which takes in an argument of the python version. 
+This allows the user to check their work before pushing to Github, where travis-ci will run.
+
+For 2.7:
+```
+docker build -t local-test --build-arg PYTHON_VERSION=2.7 .
+docker run --rm local-test:latest bash -i -c "python tests/dl_runner.py"
+```
+
+For 3.6
+```
+docker build -t local-test --build-arg PYTHON_VERSION=3.6 .
+docker run --rm local-test:latest bash -i -c "python tests/dl_runner.py"
+```
 
 
 ## Future planned features 
