@@ -36,9 +36,9 @@ if __name__ == '__main__':
         tfOutput='out/Sigmoid:0',
         tfOptimizer='adam',
         tfLearningRate=.001,
-        iters=2,
+        iters=10,
         predictionCol='predicted',
-        partitions=3,
+        partitions=4,
         miniBatchSize=256,
         verbose=1
     ).fit(na)
