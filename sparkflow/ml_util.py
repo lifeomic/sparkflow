@@ -73,7 +73,12 @@ def predict_func(rows, graph_json, prediction, graph_weights, inp, activation, t
             pred = sess.run(out_node, feed_dict=feed_dict)
             for i in range(0, len(rows)):
                 row = rows[i]
-                row[prediction] = Vectors.dense(pred[i])
+                try:
+                    # Vectors Dense are handled differently in python 3
+                    internal = float(pred[i])
+                    row[prediction] = internal
+                except:
+                    row[prediction] = Vectors.dense(pred[i])
         return [Row(**a) for a in rows]
     return []
 

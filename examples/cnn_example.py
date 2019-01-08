@@ -15,7 +15,7 @@ def cnn_model():
     conv1 = tf.layers.max_pooling2d(conv1, 2, 2)
     conv2 = tf.layers.conv2d(conv1, 64, 3, activation=tf.nn.relu)
     conv2 = tf.layers.max_pooling2d(conv2, 2, 2)
-    fc1 = tf.contrib.layers.flatten(conv2)
+    fc1 = tf.layers.flatten(conv2)
     out = tf.layers.dense(fc1, 10)
     z = tf.argmax(out, 1, name='out')
     loss = tf.losses.softmax_cross_entropy(y, out)

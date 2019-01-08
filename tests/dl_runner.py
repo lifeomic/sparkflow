@@ -67,7 +67,7 @@ class SparkFlowTests(PysparkTest):
         nb_errors = 0
         for d in data:
             lab = d['label']
-            predicted = 1 if d['predicted'][0] >= 0.5 else 0
+            predicted = 1 if d['predicted'] >= 0.5 else 0
             if predicted != lab:
                 nb_errors += 1
         return nb_errors

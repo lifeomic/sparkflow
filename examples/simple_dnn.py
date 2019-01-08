@@ -1,19 +1,21 @@
 from pyspark.sql import SparkSession
 import tensorflow as tf
 from pyspark.ml.feature import VectorAssembler, OneHotEncoder
-from sparkflow.tensorflow_async import SparkAsyncDL, SparkAsyncDLModel
+from sparkflow.tensorflow_async import SparkAsyncDL
 from pyspark.sql.functions import rand
 from sparkflow.graph_utils import build_graph
 from sparkflow.graph_utils import build_adam_config
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.pipeline import Pipeline, PipelineModel
+from sparkflow.pipeline_util import PysparkPipelineWrapper
 
 
 def small_model():
     x = tf.placeholder(tf.float32, shape=[None, 784], name='x')
     y = tf.placeholder(tf.float32, shape=[None, 10], name='y')
-    layer1 = tf.layers.dense(x, 256, activation=tf.nn.relu)
-    layer2 = tf.layers.dense(layer1, 256, activation=tf.nn.relu)
-    out = tf.layers.dense(layer2, 10)
+    layer1 = tf.layers.dense(x, 256, activation=tf.nn.relu, kernel_initializer=tf.glorot_uniform_initializer())
+    layer2 = tf.layers.dense(layer1, 256, activation=tf.nn.relu, kernel_initializer=tf.glorot_uniform_initializer())
+    out = tf.layers.dense(layer2, 10, kernel_initializer=tf.glorot_uniform_initializer())
     z = tf.argmax(out, 1, name='out')
     loss = tf.losses.softmax_cross_entropy(y, out)
     return loss
@@ -22,17 +24,23 @@ def small_model():
 if __name__ == '__main__':
     spark = SparkSession.builder \
         .appName("examples") \
-        .master('local[8]').config('spark.driver.memory', '4g') \
+        .master('local[4]').config('spark.driver.memory', '2g') \
         .getOrCreate()
 
-    df = spark.read.option("inferSchema", "true").csv('mnist_train.csv').orderBy(rand())
+    # Read in mnist_train.csv dataset
+    df = spark.read.option("inferSchema", "true").csv('examples/mnist_train.csv').orderBy(rand())
+
+    # Build the tensorflow graph
     mg = build_graph(small_model)
+
+    # Build the adam optimizer
     adam_config = build_adam_config(learning_rate=0.001, beta1=0.9, beta2=0.999)
 
-    va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features').transform(df)
-    encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False).transform(va).select(['features', 'labels'])
+    # Setup features
+    vector_assembler = VectorAssembler(inputCols=df.columns[1:785], outputCol='features')
+    encoder = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False)
 
-    #demonstration of options. Not all are required
+    # Demonstration of options. Not all are required
     spark_model = SparkAsyncDL(
         inputCol='features',
         tensorflowGraph=mg,
@@ -46,14 +54,21 @@ if __name__ == '__main__':
         iters=50,
         predictionCol='predicted',
         labelCol='labels',
-        partitions=3,
+        partitions=4,
         verbose=1,
         optimizerOptions=adam_config
     )
 
-    spark_model.fit(encoded).save('simple_dnn')
-    predictions = SparkAsyncDLModel.load("simple_dnn").transform(encoded)
+    # Create and save the Pipeline
+    p = Pipeline(stages=[vector_assembler, encoder, spark_model]).fit(df)
+    p.save('simple_dnn')
+
+    # Example of loading the pipeline
+    loaded_pipeline = PysparkPipelineWrapper.unwrap(PipelineModel.load('simple_dnn'))
+
+    # Run predictions and evaluation
+    predictions = loaded_pipeline.transform(df)
     evaluator = MulticlassClassificationEvaluator(
-        labelCol="labels", predictionCol="predicted", metricName="accuracy")
+        labelCol="_c0", predictionCol="predicted", metricName="accuracy")
     accuracy = evaluator.evaluate(predictions)
     print("Test Error = %g" % (1.0 - accuracy))
