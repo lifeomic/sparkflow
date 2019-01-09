@@ -66,7 +66,15 @@ p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
 p.write().overwrite().save("location")
 ``` 
 
-For a couple more, visit the examples directory. 
+For a couple more, visit the examples directory. These examples can be run with Docker as well from the provided Dockerfile and 
+Makefile. This can be done with the following command:
+
+```bash
+make docker-build
+make docker-run-dnn
+```
+
+Once built, there are also commands to run the example CNN and an autoencoder.
 
 
 ## Documentation
