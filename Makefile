@@ -10,3 +10,6 @@ docker-run-autoencoder:
 docker-run-cnn:
 	docker run --rm local-build:latest bash -i -c "python examples/cnn_example.py"
 
+docker-run-test:
+	docker run --rm local-build:latest bash -i -c "python tests/dl_runner.py"
+
