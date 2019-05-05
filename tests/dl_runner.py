@@ -63,6 +63,16 @@ class SparkFlowTests(PysparkTest):
         return loss
 
     @staticmethod
+    def create_autoencoder():
+        x = tf.placeholder(tf.float32, shape=[None, 10], name='x')
+        encoder = tf.layers.dense(x, 5, activation=tf.nn.relu)
+        bottle_neck = tf.layers.dense(encoder, 2, activation=tf.nn.sigmoid, name='out')
+        decoder = tf.layers.dense(bottle_neck, 5, activation=tf.nn.relu)
+        reconstructed = tf.layers.dense(decoder, 10)
+        loss = tf.losses.mean_squared_error(x, reconstructed)
+        return loss
+
+    @staticmethod
     def calculate_errors(data):
         nb_errors = 0
         for d in data:
@@ -260,6 +270,26 @@ class SparkFlowTests(PysparkTest):
             partitionShuffles=2
         )
         self.handle_assertions(spark_model, processed)
+
+    def test_auto_encoder(self):
+        processed = self.generate_random_data()
+        mg = build_graph(SparkFlowTests.create_autoencoder)
+        spark_model = SparkAsyncDL(
+            inputCol='features',
+            tensorflowGraph=mg,
+            tfInput='x:0',
+            tfLabel=None,
+            tfOutput='out/Sigmoid:0',
+            tfOptimizer='adam',
+            tfLearningRate=.001,
+            iters=10,
+            predictionCol='predicted',
+            partitions=4,
+            miniBatchSize=10,
+            verbose=1
+        )
+        encoded = spark_model.fit(processed).transform(processed).take(10)
+        print(encoded[0]['predicted'])
 
 
 if __name__ == '__main__':
