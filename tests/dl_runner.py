@@ -271,6 +271,26 @@ class SparkFlowTests(PysparkTest):
         )
         self.handle_assertions(spark_model, processed)
 
+    def test_auto_encoder(self):
+        processed = self.generate_random_data()
+        mg = build_graph(SparkFlowTests.create_autoencoder)
+        spark_model = SparkAsyncDL(
+            inputCol='features',
+            tensorflowGraph=mg,
+            tfInput='x:0',
+            tfLabel=None,
+            tfOutput='out/Sigmoid:0',
+            tfOptimizer='adam',
+            tfLearningRate=.001,
+            iters=10,
+            predictionCol='predicted',
+            partitions=4,
+            miniBatchSize=10,
+            verbose=1
+        )
+        encoded = spark_model.fit(processed).transform(processed).take(10)
+        print(encoded[0]['predicted'])
+
 
 if __name__ == '__main__':
     unittest.main()
