@@ -9,8 +9,15 @@ import tensorflow as tf
 import itertools
 from sparkflow.RWLock import RWLock
 from multiprocessing import Process
+import multiprocessing
 import uuid
 import requests
+
+
+try:
+    multiprocessing.set_start_method('spawn')
+except Exception as e:
+    pass
 
 
 import logging
@@ -177,8 +184,8 @@ class HogwildSparkModel(object):
         lock = RWLock()
 
         server = tf.train.Server.create_local_server()
-        ng = tf.Graph()
-        with ng.as_default():
+        new_graph = tf.Graph()
+        with new_graph.as_default():
             tf.train.import_meta_graph(metagraph)
             loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
             trainable_variables = tf.trainable_variables()
@@ -187,8 +194,8 @@ class HogwildSparkModel(object):
             train_op = optimizer.apply_gradients(grads)
             init = tf.global_variables_initializer()
 
-        glob_session = tf.Session(server.target, graph=ng)
-        with ng.as_default():
+        glob_session = tf.Session(server.target, graph=new_graph)
+        with new_graph.as_default():
             with glob_session.as_default():
                 glob_session.run(init)
                 self.weights = tensorflow_get_weights(trainable_variables)
@@ -211,7 +218,7 @@ class HogwildSparkModel(object):
 
         @app.route('/update', methods=['POST'])
         def update_parameters():
-            with ng.as_default():
+            with new_graph.as_default():
                 gradients = pickle.loads(request.data)
                 nu_feed = {}
                 for x, grad_var in enumerate(grads):

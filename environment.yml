@@ -12,7 +12,7 @@ dependencies:
 - h5py=2.8.0
 - pillow=4.1.1
 - dill
-- tensorflow=1.7.0
+- tensorflow=1.10.0
 - flask
 - requests
 # test
