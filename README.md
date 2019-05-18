@@ -1,24 +1,25 @@
 # SparkFlow
 
-This is an implementation of Tensorflow on Spark. The goal of this library is to provide a simple, understandable interface 
-in using Tensorflow on Spark. With SparkFlow, you can easily integrate your deep learning model with a ML Spark Pipeline.
-Underneath, SparkFlow uses a parameter server to train the Tensorflow network in a distributed manner. Through the api,
+This is an implementation of TensorFlow on Spark. The goal of this library is to provide a simple, understandable interface 
+in using TensorFlow on Spark. With SparkFlow, you can easily integrate your deep learning model with a ML Spark Pipeline.
+Underneath, SparkFlow uses a parameter server to train the TensorFlow network in a distributed manner. Through the api,
 the user can specify the style of training, whether that is Hogwild or async with locking.
 
 [![Build Status](https://api.travis-ci.org/lifeomic/sparkflow.svg?branch=master)](https://travis-ci.org/lifeomic/sparkflow)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/lifeomic/sparkflow/blob/master/LICENSE)
 
 ## Why should I use this?
-While there are other libraries that use Tensorflow on Apache Spark, Sparkflow's objective is to work seemlessly 
-with ML Pipelines, provide a simple interface for training Tensorflow graphs, and give basic abstractions for 
-faster development. For training, Sparkflow uses a parameter server which lives on the driver and allows for asynchronous training. This tool 
+While there are other libraries that use TensorFlow on Apache Spark, SparkFlow's objective is to work seamlessly 
+with ML Pipelines, provide a simple interface for training TensorFlow graphs, and give basic abstractions for 
+faster development. For training, SparkFlow uses a parameter server which lives on the driver and allows for asynchronous training. This tool 
 provides faster training time when using big data.
 
 ## Installation
 
-Install sparkflow via pip: `pip install sparkflow`
+Install SparkFlow via pip: `pip install sparkflow`
 
-SparkFlow requires Apache Spark >= 2.0, flask, and Tensorflow to all be installed.
+SparkFlow requires Apache Spark >= 2.0, flask, dill, and TensorFlow to be installed. As of sparkflow >= 0.7.0, only 
+python >= 3.5 will be supported.
 
 
 ## Example
@@ -162,7 +163,7 @@ optimizerOptions: Json options to apply to tensorflow optimizers.
 
 #### Optimization Configuration
 
-As of Sparkflow version 0.2.1, Tensorflow optimization configuration options can be added to SparkAsyncDL for more control 
+As of SparkFlow version 0.2.1, TensorFlow optimization configuration options can be added to SparkAsyncDL for more control 
 over the optimizer. While the user can supply the configuration json directly, there are a few provided utility 
 functions that include the parameters necessary. An example is provided below.
 
@@ -208,7 +209,7 @@ Contributions are always welcome. This could be fixing a bug, changing documenta
 new changes against existing tests, we have provided a Docker container which takes in an argument of the python version. 
 This allows the user to check their work before pushing to Github, where travis-ci will run.
 
-For 2.7:
+For 2.7 (sparkflow <= 0.6.0):
 ```
 docker build -t local-test --build-arg PYTHON_VERSION=2.7 .
 docker run --rm local-test:latest bash -i -c "python tests/dl_runner.py"

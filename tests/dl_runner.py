@@ -291,6 +291,26 @@ class SparkFlowTests(PysparkTest):
         encoded = spark_model.fit(processed).transform(processed).take(10)
         print(encoded[0]['predicted'])
 
+    def test_change_port(self):
+        processed = self.generate_random_data()
+        mg = build_graph(SparkFlowTests.create_random_model)
+
+        spark_model = SparkAsyncDL(
+            inputCol='features',
+            tensorflowGraph=mg,
+            tfInput='x:0',
+            tfLabel='y:0',
+            tfOutput='outer/Sigmoid:0',
+            tfOptimizer='adam',
+            tfLearningRate=.1,
+            iters=35,
+            partitions=2,
+            predictionCol='predicted',
+            labelCol='label',
+            port=3000
+        )
+        self.handle_assertions(spark_model, processed)
+
 
 if __name__ == '__main__':
     unittest.main()
