@@ -127,7 +127,8 @@ class HogwildSparkModel(object):
                  shuffle=True,
                  verbose=0,
                  partition_shuffles=1,
-                 loss_callback=None):
+                 loss_callback=None,
+                 port=5000):
         self.tensorflowGraph = tensorflowGraph
         self.iters = iters
         self.tfInput = tfInput
@@ -135,7 +136,7 @@ class HogwildSparkModel(object):
         self.acquire_lock = acquire_lock
         graph = tf.MetaGraphDef()
         metagraph = json_format.Parse(tensorflowGraph, graph)
-        self.start_server(metagraph, optimizer)
+        self.start_server(metagraph, optimizer, port)
         #allow server to start up on separate thread
         time.sleep(serverStartup)
         self.mini_batch = mini_batch
@@ -144,24 +145,25 @@ class HogwildSparkModel(object):
         self.shuffle = shuffle
         self.partition_shuffles= partition_shuffles
         self.loss_callback = loss_callback
-        self.master_url = master_url if master_url is not None else HogwildSparkModel.determine_master()
+        self.master_url = master_url if master_url is not None else HogwildSparkModel.determine_master(port)
+        self.port = port
 
     @staticmethod
-    def determine_master():
+    def determine_master(port):
         """
         Get the url of the driver node. This is kind of crap on mac.
         """
         try:
-            master_url = socket.gethostbyname(socket.gethostname()) + ':5000'
+            master_url = socket.gethostbyname(socket.gethostname()) + ':' + str(port)
             return master_url
         except:
-            return 'localhost:5000'
+            return 'localhost:' + str(port)
 
-    def start_server(self, tg, optimizer):
+    def start_server(self, tg, optimizer, port):
         """
         Starts the server with a copy of the argument for weird tensorflow multiprocessing issues
         """
-        self.server = Process(target=self.start_service, args=(tg, optimizer))
+        self.server = Process(target=self.start_service, args=(tg, optimizer, port))
         self.server.daemon = True
         self.server.start()
 
@@ -172,7 +174,7 @@ class HogwildSparkModel(object):
         self.server.terminate()
         self.server.join()
 
-    def start_service(self, metagraph, optimizer):
+    def start_service(self, metagraph, optimizer, port):
         """
         Asynchronous flask service. This may be a bit confusing why the server starts here and not init.
         It is basically because this is ran in a separate process, and when python call fork, we want to fork from this
@@ -241,7 +243,7 @@ class HogwildSparkModel(object):
 
             return 'completed'
 
-        self.app.run(host='0.0.0.0', use_reloader=False, threaded=True, port=5000)
+        self.app.run(host='0.0.0.0', use_reloader=False, threaded=True, port=port)
 
     def train(self, rdd):
         try:

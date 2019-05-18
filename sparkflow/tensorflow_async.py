@@ -118,6 +118,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
     toKeepDropout = Param(Params._dummy(), "toKeepDropout", "", typeConverter=TypeConverters.toBoolean)
     partitionShuffles = Param(Params._dummy(), "partitionShuffles", "", typeConverter=TypeConverters.toInt)
     optimizerOptions = Param(Params._dummy(), "optimizerOptions", "", typeConverter=TypeConverters.toString)
+    port = Param(Params._dummy(), "port", "", typeConverter=TypeConverters.toInt)
 
     @keyword_only
     def __init__(self,
@@ -140,7 +141,8 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
                  verbose=None,
                  labelCol=None,
                  partitionShuffles=None,
-                 optimizerOptions=None):
+                 optimizerOptions=None,
+                 port=None):
         """
         :param inputCol: Spark dataframe inputCol. Similar to other spark ml inputCols
         :param tensorflowGraph: The protobuf tensorflow graph. You can use the utility function in graph_utils
@@ -168,6 +170,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
         if you have 2 partition shuffles and 100 iterations, it will run 100 iterations then reshuffle and run 100 iterations again.
         The repartition hits performance and should be used with care.
         :param optimizerOptions: Json options to apply to tensorflow optimizers.
+        :param port: Flask Port
         """
         super(SparkAsyncDL, self).__init__()
         self._setDefault(inputCol='transformed', tensorflowGraph='',
@@ -176,7 +179,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
                          miniBatchSize=128, miniStochasticIters=-1,
                          shufflePerIter=True, tfDropout=None, acquireLock=False, verbose=0,
                          iters=1000, toKeepDropout=False, predictionCol='predicted', labelCol=None,
-                         partitionShuffles=1, optimizerOptions=None)
+                         partitionShuffles=1, optimizerOptions=None, port=5000)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -201,7 +204,8 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
                   verbose=None,
                   labelCol=None,
                   partitionShuffles=None,
-                  optimizerOptions=None):
+                  optimizerOptions=None,
+                  port=None):
         kwargs = self._input_kwargs
         return self._set(**kwargs)
 
@@ -256,6 +260,9 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
     def getOptimizerOptions(self):
         return self.getOrDefault(self.optimizerOptions)
 
+    def getPort(self):
+        return self.getOrDefault(self.port)
+
     def _fit(self, dataset):
         inp_col = self.getInputCol()
         graph_json = self.getTensorflowGraph()
@@ -278,6 +285,7 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
         tf_dropout = self.getTfDropout()
         to_keep_dropout = self.getToKeepDropout()
         partition_shuffles = self.getPartitionShuffles()
+        port = self.getPort()
 
         df = dataset.rdd.map(lambda x: handle_data(x, inp_col, label))
         df = df.coalesce(partitions) if partitions < df.getNumPartitions() else df
@@ -288,13 +296,14 @@ class SparkAsyncDL(Estimator, HasInputCol, HasPredictionCol, HasLabelCol,Pyspark
             tfInput=tf_input,
             tfLabel=tf_label,
             optimizer=tf_optimizer,
-            master_url=SparkContext._active_spark_context.getConf().get("spark.driver.host").__str__() + ":5000",
+            master_url=SparkContext._active_spark_context.getConf().get("spark.driver.host").__str__() + ":" + str(port),
             acquire_lock=acquire_lock,
             mini_batch=mbs,
             mini_stochastic_iters=msi,
             shuffle=spi,
             verbose=verbose,
-            partition_shuffles=partition_shuffles
+            partition_shuffles=partition_shuffles,
+            port=port
         )
 
         weights = spark_model.train(df)
