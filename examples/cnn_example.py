@@ -21,10 +21,11 @@ def cnn_model():
     loss = tf.losses.softmax_cross_entropy(y, out)
     return loss
 
+
 if __name__ == '__main__':
     spark = SparkSession.builder \
         .appName("examples") \
-        .master('local[8]').config('spark.driver.memory', '2g') \
+        .master('local[4]').config('spark.driver.memory', '4g') \
         .getOrCreate()
 
     df = spark.read.option("inferSchema", "true").csv('examples/mnist_train.csv').orderBy(rand())
@@ -41,7 +42,8 @@ if __name__ == '__main__':
         miniBatchSize=300,
         miniStochasticIters=-1,
         shufflePerIter=True,
-        iters=20,
+        iters=50,
+        partitions=4,
         tfLearningRate=.0001,
         predictionCol='predicted',
         labelCol='labels',
