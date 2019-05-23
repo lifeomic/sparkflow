@@ -13,3 +13,5 @@ docker-run-cnn:
 docker-run-test:
 	docker run --rm local-build:latest bash -i -c "python tests/dl_runner.py"
 
+docker-compose-dnn:
+	docker-compose --file ./docker-compose.yml bash -i -c "python examples/simple_dnn.py"

@@ -1,5 +1,5 @@
 from flask import Flask, request
-import pickle
+import six.moves.cPickle as pickle
 from sparkflow.ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
 
 from google.protobuf import json_format
@@ -12,12 +12,6 @@ from multiprocessing import Process
 import multiprocessing
 import uuid
 import requests
-
-
-try:
-    multiprocessing.set_start_method('spawn')
-except Exception as e:
-    pass
 
 
 import logging
@@ -163,6 +157,10 @@ class HogwildSparkModel(object):
         """
         Starts the server with a copy of the argument for weird tensorflow multiprocessing issues
         """
+        try:
+            multiprocessing.set_start_method('spawn')
+        except Exception as e:
+            pass
         self.server = Process(target=self.start_service, args=(tg, optimizer, port))
         self.server.daemon = True
         self.server.start()
