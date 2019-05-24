@@ -1,18 +1,13 @@
-from flask import Flask, request
 import six.moves.cPickle as pickle
-from sparkflow.ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
+from sparkflow.ml_util import tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
 
 from google.protobuf import json_format
 import socket
 import time
 import tensorflow as tf
-import itertools
-from sparkflow.RWLock import RWLock
-from multiprocessing import Process
-import multiprocessing
 import uuid
 import requests
-
+from sparkflow.server import Server
 
 import logging
 log = logging.getLogger('werkzeug')
@@ -128,9 +123,12 @@ class HogwildSparkModel(object):
         self.tfInput = tfInput
         self.tfLabel = tfLabel
         self.acquire_lock = acquire_lock
-        graph = tf.MetaGraphDef()
-        metagraph = json_format.Parse(tensorflowGraph, graph)
-        self.start_server(metagraph, optimizer, port)
+
+        mgd = tf.MetaGraphDef()
+        metagraph = json_format.Parse(tensorflowGraph, mgd)
+
+        self.server = Server(metagraph, optimizer, port, iters, acquire_lock)
+
         #allow server to start up on separate thread
         time.sleep(serverStartup)
         self.mini_batch = mini_batch
@@ -152,96 +150,6 @@ class HogwildSparkModel(object):
             return master_url
         except:
             return 'localhost:' + str(port)
-
-    def start_server(self, tg, optimizer, port):
-        """
-        Starts the server with a copy of the argument for weird tensorflow multiprocessing issues
-        """
-        try:
-            multiprocessing.set_start_method('spawn')
-        except Exception as e:
-            pass
-        self.server = Process(target=self.start_service, args=(tg, optimizer, port))
-        self.server.daemon = True
-        self.server.start()
-
-    def stop_server(self):
-        """
-        Needs to get called when training is done
-        """
-        self.server.terminate()
-        self.server.join()
-
-    def start_service(self, metagraph, optimizer, port):
-        """
-        Asynchronous flask service. This may be a bit confusing why the server starts here and not init.
-        It is basically because this is ran in a separate process, and when python call fork, we want to fork from this
-        thread and not the master thread
-        """
-        app = Flask(__name__)
-        self.app = app
-        max_errors = self.iters
-        lock = RWLock()
-
-        server = tf.train.Server.create_local_server()
-        new_graph = tf.Graph()
-        with new_graph.as_default():
-            tf.train.import_meta_graph(metagraph)
-            loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
-            trainable_variables = tf.trainable_variables()
-            grads = tf.gradients(loss_variable, trainable_variables)
-            grads = list(zip(grads, trainable_variables))
-            train_op = optimizer.apply_gradients(grads)
-            init = tf.global_variables_initializer()
-
-        glob_session = tf.Session(server.target, graph=new_graph)
-        with new_graph.as_default():
-            with glob_session.as_default():
-                glob_session.run(init)
-                self.weights = tensorflow_get_weights(trainable_variables)
-
-        cont = itertools.count()
-        lock_acquired = self.acquire_lock
-
-        @app.route('/')
-        def home():
-            return 'Lifeomic'
-
-        @app.route('/parameters', methods=['GET'])
-        def get_parameters():
-            if lock_acquired:
-                lock.acquire_read()
-            vs = pickle.dumps(self.weights)
-            if lock_acquired:
-                lock.release()
-            return vs
-
-        @app.route('/update', methods=['POST'])
-        def update_parameters():
-            with new_graph.as_default():
-                gradients = pickle.loads(request.data)
-                nu_feed = {}
-                for x, grad_var in enumerate(grads):
-                    nu_feed[grad_var[0]] = gradients[x]
-
-                if lock_acquired:
-                    lock.acquire_write()
-
-                with glob_session.as_default():
-                    try:
-                        glob_session.run(train_op, feed_dict=nu_feed)
-                        self.weights = tensorflow_get_weights(trainable_variables)
-                    except:
-                        error_cnt = cont.next()
-                        if error_cnt >= max_errors:
-                            raise Exception("Too many failures during training")
-                    finally:
-                        if lock_acquired:
-                            lock.release()
-
-            return 'completed'
-
-        self.app.run(host='0.0.0.0', use_reloader=False, threaded=True, port=port)
 
     def train(self, rdd):
         try:
@@ -265,9 +173,9 @@ class HogwildSparkModel(object):
                     num_partitions = rdd.getNumPartitions()
                     rdd = rdd.repartition(num_partitions)
             server_weights = get_server_weights(master_url)
-            self.stop_server()
+            self.server.stop_server()
             return server_weights
         except Exception as e:
-            self.stop_server()
+            self.server.stop_server()
             raise e
 
