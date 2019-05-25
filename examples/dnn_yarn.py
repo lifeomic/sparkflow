@@ -26,7 +26,7 @@ if __name__ == '__main__':
         .getOrCreate()
 
     # Read in mnist_train.csv dataset
-    df = spark.read.option("inferSchema", "true").csv('s3://lifeomic-ml/derek/mnist_train.csv').orderBy(rand())
+    df = spark.read.option("inferSchema", "true").csv('examples/mnist_train.csv').orderBy(rand())
 
     # Build the tensorflow graph
     mg = build_graph(small_model)
