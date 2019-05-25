@@ -127,7 +127,7 @@ class HogwildSparkModel(object):
         mgd = tf.MetaGraphDef()
         metagraph = json_format.Parse(tensorflowGraph, mgd)
 
-        self.server = Server(metagraph, optimizer, port, iters, acquire_lock)
+        self.server = Server()(metagraph, optimizer, port, int(iters), bool(acquire_lock))
 
         #allow server to start up on separate thread
         time.sleep(serverStartup)
@@ -173,9 +173,11 @@ class HogwildSparkModel(object):
                     num_partitions = rdd.getNumPartitions()
                     rdd = rdd.repartition(num_partitions)
             server_weights = get_server_weights(master_url)
-            self.server.stop_server()
+            self.server.terminate()
+            self.server.join()
             return server_weights
         except Exception as e:
-            self.server.stop_server()
+            self.server.terminate()
+            self.server.join()
             raise e
 

@@ -1,10 +1,17 @@
+import multiprocessing
 from multiprocessing import Process
 import itertools
 from sparkflow.RWLock import RWLock
 from flask import Flask, request
 import six.moves.cPickle as pickle
 import tensorflow as tf
-from sparkflow.ml_util import tensorflow_get_weights
+
+
+def tensorflow_get_weights(vs=None):
+    if not vs:
+        vs = tf.trainable_variables()
+    values = tf.get_default_session().run(vs)
+    return values
 
 
 class FlaskServer(Process):
@@ -16,6 +23,7 @@ class FlaskServer(Process):
         self.port = port
         self.max_errors = max_errors
         self.lock = lock
+        self.weights = None
 
     def run(self):
         """
@@ -91,26 +99,16 @@ class FlaskServer(Process):
 
 class Server(object):
 
-    def __init__(self, metagraph, optimizer, port, max_errors, lock):
-        self.metagraph = metagraph
-        self.optimizer = optimizer
-        self.port = port
-        self.lock = lock
-        self.max_errors = max_errors
-        self.server = self.start_server(metagraph, optimizer, port)
-
-    def start_server(self, tg, optimizer, port):
+    def __call__(self, tg, optimizer, port, max_errors, lock):
         """
         Starts the server with a copy of the argument for weird tensorflow multiprocessing issues
         """
-        server = FlaskServer(tg, optimizer, port, int(self.max_errors), bool(self.lock))
+        try:
+            multiprocessing.set_start_method('spawn')
+        except Exception as e:
+            pass
+        server = FlaskServer(tg, optimizer, port, int(max_errors), bool(lock))
         server.daemon = True
         server.start()
+        self.server = server
         return server
-
-    def stop_server(self):
-        """
-        Needs to get called when training is done
-        """
-        self.server.terminate()
-        self.server.join()

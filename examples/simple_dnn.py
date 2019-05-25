@@ -24,7 +24,7 @@ def small_model():
 if __name__ == '__main__':
     spark = SparkSession.builder \
         .appName("examples") \
-        .master('local[4]').config('spark.driver.memory', '2g') \
+        .master('local[4]').config('spark.driver.memory', '4g') \
         .getOrCreate()
 
     # Read in mnist_train.csv dataset
