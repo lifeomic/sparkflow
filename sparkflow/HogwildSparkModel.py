@@ -8,6 +8,7 @@ import tensorflow as tf
 import uuid
 import requests
 from sparkflow.server import Server
+import copy
 
 import logging
 log = logging.getLogger('werkzeug')
@@ -124,11 +125,14 @@ class HogwildSparkModel(object):
         self.tfLabel = tfLabel
         self.acquire_lock = acquire_lock
 
-        mgd = tf.MetaGraphDef()
-        metagraph = json_format.Parse(tensorflowGraph, mgd)
-
-        self.server = Server()(metagraph, optimizer, port, int(iters), bool(acquire_lock))
-
+        self.server = Server(
+            copy.deepcopy(tensorflowGraph),
+            copy.deepcopy(optimizer),
+            copy.deepcopy(port),
+            int(iters),
+            bool(acquire_lock)
+        )
+        self.server.start()
         #allow server to start up on separate thread
         time.sleep(serverStartup)
         self.mini_batch = mini_batch
@@ -173,11 +177,9 @@ class HogwildSparkModel(object):
                     num_partitions = rdd.getNumPartitions()
                     rdd = rdd.repartition(num_partitions)
             server_weights = get_server_weights(master_url)
-            self.server.terminate()
-            self.server.join()
+            self.server.stop()
             return server_weights
         except Exception as e:
-            self.server.terminate()
-            self.server.join()
+            self.server.stop()
             raise e
 

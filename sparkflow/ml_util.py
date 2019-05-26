@@ -6,12 +6,14 @@ from pyspark.ml.linalg import Vectors
 from pyspark.sql import Row
 
 
-def tensorflow_get_weights(vs=None):
+def tensorflow_get_weights(vs=None, sess=None):
     if not vs:
         vs = tf.trainable_variables()
-    values = tf.get_default_session().run(vs)
+    if sess:
+        values = sess.run(vs)
+    else:
+        values = tf.get_default_session().run(vs)
     return values
-
 
 def tensorflow_set_weights(weights, vs=None):
     assign_ops = []

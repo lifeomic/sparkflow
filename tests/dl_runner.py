@@ -282,9 +282,9 @@ class SparkFlowTests(PysparkTest):
             tfOutput='out/Sigmoid:0',
             tfOptimizer='adam',
             tfLearningRate=.001,
-            iters=10,
+            iters=5,
             predictionCol='predicted',
-            partitions=4,
+            partitions=2,
             miniBatchSize=10,
             verbose=1
         )
