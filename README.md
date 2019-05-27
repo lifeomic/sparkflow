@@ -32,7 +32,9 @@ from sparkflow.tensorflow_async import SparkAsyncDL
 import tensorflow as tf
 from pyspark.ml.feature import VectorAssembler, OneHotEncoder
 from pyspark.ml.pipeline import Pipeline
-    
+from pyspark.sql import SparkSession
+
+
 #simple tensorflow network
 def small_model():
     x = tf.placeholder(tf.float32, shape=[None, 784], name='x')
@@ -43,29 +45,36 @@ def small_model():
     z = tf.argmax(out, 1, name='out')
     loss = tf.losses.softmax_cross_entropy(y, out)
     return loss
+
+if __name__ == '__main__':
+    spark = SparkSession.builder \
+        .appName("examples") \
+        .getOrCreate()
     
-df = spark.read.option("inferSchema", "true").csv('mnist_train.csv')
-mg = build_graph(small_model)
-#Assemble and one hot encode
-va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features')
-encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False)
-
-spark_model = SparkAsyncDL(
-    inputCol='features',
-    tensorflowGraph=mg,
-    tfInput='x:0',
-    tfLabel='y:0',
-    tfOutput='out:0',
-    tfLearningRate=.001,
-    iters=20,
-    predictionCol='predicted',
-    labelCol='labels',
-    verbose=1
-)
-
-p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
-p.write().overwrite().save("location")
+    df = spark.read.option("inferSchema", "true").csv('mnist_train.csv')
+    mg = build_graph(small_model)
+    #Assemble and one hot encode
+    va = VectorAssembler(inputCols=df.columns[1:785], outputCol='features')
+    encoded = OneHotEncoder(inputCol='_c0', outputCol='labels', dropLast=False)
+    
+    spark_model = SparkAsyncDL(
+        inputCol='features',
+        tensorflowGraph=mg,
+        tfInput='x:0',
+        tfLabel='y:0',
+        tfOutput='out:0',
+        tfLearningRate=.001,
+        iters=20,
+        predictionCol='predicted',
+        labelCol='labels',
+        verbose=1
+    )
+    
+    p = Pipeline(stages=[va, encoded, spark_model]).fit(df)
+    p.write().overwrite().save("location")
 ``` 
+Please not that as of SparkFlow version 0.7.0, the parameter server uses a spawn process. This means that global spark sessions 
+should be avoided and that python functions should be placed outside of the `__name__ == '__main__'` clause
 
 For a couple more, visit the examples directory. These examples can be run with Docker as well from the provided Dockerfile and 
 Makefile. This can be done with the following command:
