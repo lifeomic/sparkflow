@@ -1,0 +1,68 @@
+# ATTENTION: Please set the language below before adding this workflow to a repository
+#
+# This workflow is inherited from our internal .github repo at 
+# https://github.com/lifeomic/.github/blob/master/workflow-templates/basic-code-scanning.yml
+# 
+# Setting up this workflow on the repository will perform a static scan for security issues using GitHub Code Scanning. 
+# Any findings for a repository can be found under the `Security` tab -> `Code Scanning Alerts`
+name: "CodeQL"
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # PLEASE CHANGE TO THE LANGUAGE(S) USED WITHIN THE TARGET REPOSITORY
+        # Options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']
+        # Use 'javascript' for typescript-based repositories
+        language: ['python']
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+
+    # If this run was triggered by a pull request event, then checkout
+    # the head of the pull request instead of the merge commit.
+    - run: git checkout HEAD^2
+      if: ${{ github.event_name == 'pull_request' }}
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
+        queries: +security-extended
+        # This will run all queries at https://github.com/github/codeql/:language/ql/src/codeql-suites/:language-security-extended.qls
+        # config-file: ./.github/codeql/codeql-config.yml     <- can be used to add a custom config file
+
+    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
+    # If this step fails, then you should remove it and run the build manually (see below)
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v1
+
+    # ℹ️ Command-line programs to run using the OS shell.
+    # 📚 https://git.io/JvXDl
+
+    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
+    #    and modify them (or add more) to build your code if your project
+    #    uses a compiled language
+
+    #- run: |
+    #   make bootstrap
+    #   make release
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
