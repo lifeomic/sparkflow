@@ -1,7 +1,4 @@
-# ATTENTION: Please set the language below before adding this workflow to a repository
-#
-# This workflow is inherited from our internal .github repo at 
-# https://github.com/lifeomic/.github/blob/master/workflow-templates/basic-code-scanning.yml
+# This workflow is inherited from our internal .github repo at https://github.com/lifeomic/.github/blob/master/workflow-templates/code-scanning-v3.yml
 # 
 # Setting up this workflow on the repository will perform a static scan for security issues using GitHub Code Scanning. 
 # Any findings for a repository can be found under the `Security` tab -> `Code Scanning Alerts`
@@ -10,8 +7,22 @@ name: "CodeQL"
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - test
+      - tests
+      - '**/test'
+      - '**/tests'
+      - '**/*.test.js'
+      - '**/*.test.ts'
   pull_request:
     branches: [master]
+    paths-ignore:
+      - test
+      - tests
+      - '**/test'
+      - '**/tests'
+      - '**/*.test.js'
+      - '**/*.test.ts'
 
 jobs:
   analyze:
@@ -20,11 +31,6 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        # PLEASE CHANGE TO THE LANGUAGE(S) USED WITHIN THE TARGET REPOSITORY
-        # Options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']
-        # Use 'javascript' for typescript-based repositories
-        language: ['python']
 
     steps:
     - name: Checkout repository
@@ -43,10 +49,8 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v1
       with:
-        languages: ${{ matrix.language }}
-        queries: +security-extended
-        # This will run all queries at https://github.com/github/codeql/:language/ql/src/codeql-suites/:language-security-extended.qls
-        # config-file: ./.github/codeql/codeql-config.yml     <- can be used to add a custom config file
+        config-file: lifeomic/.github/config-files/codeql-config.yml@master  # uses our config file from the lifeomic/.github repo
+        queries: +security-extended  # This will run all queries at https://github.com/github/codeql/:language/ql/src/codeql-suites/:language-security-extended.qls
 
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
