@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow_core as tf
 from sparkflow.pipeline_util import PysparkReaderWriter
 import numpy as np
 

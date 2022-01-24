@@ -1,11 +1,11 @@
 from flask import Flask, request
 import six.moves.cPickle as pickle
-from sparkflow.ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
+from sparkflow.ml_util import tensorflow_core_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
 
 from google.protobuf import json_format
 import socket
 import time
-import tensorflow as tf
+import tensorflow_core as tf
 import itertools
 from sparkflow.RWLock import RWLock
 from multiprocessing import Process

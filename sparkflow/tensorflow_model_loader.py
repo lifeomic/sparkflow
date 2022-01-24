@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow_core as tf
 from sparkflow.tensorflow_async import SparkAsyncDLModel
 from google.protobuf import json_format
 from pyspark.ml.pipeline import PipelineModel

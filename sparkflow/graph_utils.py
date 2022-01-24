@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow_core as tf
 from google.protobuf import json_format
 import json
 
