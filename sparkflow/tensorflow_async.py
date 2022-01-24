@@ -1,5 +1,5 @@
 import tensorflow_core as tf
-from .pipeline_util import PysparkReaderWriter
+import pipeline_util.PysparkReaderWriter
 import numpy as np
 
 from pyspark.ml.param import Param, Params, TypeConverters
@@ -8,8 +8,8 @@ from pyspark.ml.base import Estimator
 from pyspark.ml import Model
 from pyspark.ml.util import Identifiable, MLReadable, MLWritable
 from pyspark import keyword_only
-from HogwildSparkModel import HogwildSparkModel
-from ml_util import convert_weights_to_json, predict_func
+import HogwildSparkModel.HogwildSparkModel
+import ml_util.convert_weights_to_json, ml_util.predict_func
 from pyspark import SparkContext
 import json
 
