@@ -1,5 +1,5 @@
 import tensorflow_core as tf
-from pipeline_util import PysparkReaderWriter
+from .pipeline_util import PysparkReaderWriter
 import numpy as np
 
 from pyspark.ml.param import Param, Params, TypeConverters
