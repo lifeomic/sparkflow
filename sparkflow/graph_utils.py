@@ -10,7 +10,7 @@ def build_graph(func):
     """
     first_graph = tf.Graph()
     with first_graph.as_default() as g:
-        v = func()
+        v = func
         mg = json_format.MessageToJson(tf.train.export_meta_graph())
     return mg
 
