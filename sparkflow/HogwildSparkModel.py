@@ -19,7 +19,7 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 
-def get_server_weights(master_url='localhost:5000'):
+def get_server_weights(master_url='0.0.0.0:5000'):
     """
     This will get the raw weights, pickle load them, and return.
     """
@@ -28,7 +28,7 @@ def get_server_weights(master_url='localhost:5000'):
     return weights
 
 
-def put_deltas_to_server(delta, master_url='localhost:5000'):
+def put_deltas_to_server(delta, master_url='0.0.0.0:5000'):
     """
     This updates the master parameters. We just use simple pickle serialization here.
     """
@@ -36,7 +36,7 @@ def put_deltas_to_server(delta, master_url='localhost:5000'):
 
 
 def handle_model(data, graph_json, tfInput, tfLabel=None,
-                 master_url='localhost:5000', iters=1000,
+                 master_url='0.0.0.0:5000', iters=1000,
                  mini_batch_size=-1, shuffle=True,
                  mini_stochastic_iters=-1, verbose=0, loss_callback=None):
     is_supervised = tfLabel is not None
