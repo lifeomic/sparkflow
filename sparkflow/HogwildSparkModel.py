@@ -47,7 +47,7 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
     new_graph = tf.Graph()
     with tf.Session(graph=new_graph) as sess:
         tf.train.import_meta_graph(gd)
-        loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
+        loss_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
         sess.run(tf.global_variables_initializer())
         trainable_variables = tf.trainable_variables()
         grads = tf.gradients(loss_variable, trainable_variables)
