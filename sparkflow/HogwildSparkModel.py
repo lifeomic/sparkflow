@@ -187,7 +187,7 @@ class HogwildSparkModel(object):
         new_graph = tf.Graph()
         with new_graph.as_default():
             tf.train.import_meta_graph(metagraph)
-            loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
+            loss_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             trainable_variables = tf.trainable_variables()
             grads = tf.gradients(loss_variable, trainable_variables)
             grads = list(zip(grads, trainable_variables))
