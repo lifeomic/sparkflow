@@ -1,13 +1,13 @@
 from flask import Flask, request
 import six.moves.cPickle as pickle
-from sparkflow.ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
+from ml_util import tensorflow_get_weights, tensorflow_set_weights, handle_features, handle_feed_dict, handle_shuffle
 
 from google.protobuf import json_format
 import socket
 import time
-import tensorflow as tf
+import tensorflow_core as tf
 import itertools
-from sparkflow.RWLock import RWLock
+from RWLock import RWLock
 from multiprocessing import Process
 import multiprocessing
 import uuid
@@ -19,7 +19,7 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 
-def get_server_weights(master_url='localhost:5000'):
+def get_server_weights(master_url='0.0.0.0:5000'):
     """
     This will get the raw weights, pickle load them, and return.
     """
@@ -28,7 +28,7 @@ def get_server_weights(master_url='localhost:5000'):
     return weights
 
 
-def put_deltas_to_server(delta, master_url='localhost:5000'):
+def put_deltas_to_server(delta, master_url='0.0.0.0:5000'):
     """
     This updates the master parameters. We just use simple pickle serialization here.
     """
@@ -36,7 +36,7 @@ def put_deltas_to_server(delta, master_url='localhost:5000'):
 
 
 def handle_model(data, graph_json, tfInput, tfLabel=None,
-                 master_url='localhost:5000', iters=1000,
+                 master_url='0.0.0.0:5000', iters=1000,
                  mini_batch_size=-1, shuffle=True,
                  mini_stochastic_iters=-1, verbose=0, loss_callback=None):
     is_supervised = tfLabel is not None
@@ -47,7 +47,7 @@ def handle_model(data, graph_json, tfInput, tfLabel=None,
     new_graph = tf.Graph()
     with tf.Session(graph=new_graph) as sess:
         tf.train.import_meta_graph(gd)
-        loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
+        loss_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
         sess.run(tf.global_variables_initializer())
         trainable_variables = tf.trainable_variables()
         grads = tf.gradients(loss_variable, trainable_variables)
@@ -187,7 +187,7 @@ class HogwildSparkModel(object):
         new_graph = tf.Graph()
         with new_graph.as_default():
             tf.train.import_meta_graph(metagraph)
-            loss_variable = tf.get_collection(tf.GraphKeys.LOSSES)[0]
+            loss_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             trainable_variables = tf.trainable_variables()
             grads = tf.gradients(loss_variable, trainable_variables)
             grads = list(zip(grads, trainable_variables))

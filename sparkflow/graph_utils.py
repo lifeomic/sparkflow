@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow_core as tf
 from google.protobuf import json_format
 import json
 
@@ -10,7 +10,7 @@ def build_graph(func):
     """
     first_graph = tf.Graph()
     with first_graph.as_default() as g:
-        v = func()
+        v = func
         mg = json_format.MessageToJson(tf.train.export_meta_graph())
     return mg
 
